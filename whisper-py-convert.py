@@ -80,10 +80,17 @@ def model_is_cached(model: str) -> bool:
     return snapshots.is_dir() and any(snapshots.iterdir())
 
 
+def hf_token() -> str | None:
+    """Return an optional Hugging Face token without ever printing it."""
+    token = os.environ.get("HF_TOKEN", "").strip()
+    return token or None
+
+
 def print_status(model: str | None = None) -> None:
     version = package_version()
     print(f"Python: {sys.executable}")
     print(f"faster-whisper: {version or 'not installed'}")
+    print(f"HF_TOKEN: {'configured' if hf_token() else 'not configured'}")
     print(f"Model cache: {Path.home() / '.cache' / 'huggingface' / 'hub'}")
     models = (model,) if model else SUPPORTED_MODELS
     for name in models:
@@ -147,7 +154,15 @@ def transcribe(args: argparse.Namespace) -> str:
     from faster_whisper import WhisperModel
 
     print(f"Loading model {args.model}...", file=sys.stderr)
-    model = WhisperModel(args.model, device=args.device, compute_type=args.compute_type)
+    token = hf_token()
+    if token:
+        print("Using HF_TOKEN for Hugging Face model download/authentication.", file=sys.stderr)
+    model = WhisperModel(
+        args.model,
+        device=args.device,
+        compute_type=args.compute_type,
+        use_auth_token=token,
+    )
     print(f"Transcribing {args.input}...", file=sys.stderr)
     segments, _info = model.transcribe(str(args.input), language=args.language)
     return "\n".join(segment.text.strip() for segment in segments).strip() + "\n"

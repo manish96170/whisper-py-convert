@@ -25,6 +25,18 @@ The first invocation installs the exact `faster-whisper==1.2.1` package if it
 is missing or a different version is installed. Models are downloaded lazily
 when first selected and cached under `~/.cache/huggingface/hub`.
 
+For authenticated Hugging Face downloads, set the token in the environment:
+
+```sh
+export HF_TOKEN=hf_your_token_here
+whisper-py-convert --model small.en recording.mp3 > transcript.txt
+```
+
+The token is passed only to the Hugging Face download client and is never
+printed or saved by this tool. It is optional for these public models; it can
+help avoid anonymous rate limits, but it does not guarantee a faster network
+transfer.
+
 ## Transcribe
 
 Print only the transcript to stdout, suitable for shell redirection:
