@@ -19,6 +19,7 @@ from pathlib import Path
 
 REQUIRED_PACKAGE = "faster-whisper==1.2.1"
 REQUIRED_VERSION = "1.2.1"
+APPLE_BINARY_NAME = "whisper-py-convert-apple"
 SUPPORTED_MODELS = (
     "tiny.en",
     "tiny",
@@ -91,11 +92,40 @@ def print_status(model: str | None = None) -> None:
     print(f"Python: {sys.executable}")
     print(f"faster-whisper: {version or 'not installed'}")
     print(f"HF_TOKEN: {'configured' if hf_token() else 'not configured'}")
+    apple_binary = find_apple_binary()
+    print(f"Apple Speech backend: {apple_binary or 'not built'}")
     print(f"Model cache: {Path.home() / '.cache' / 'huggingface' / 'hub'}")
     models = (model,) if model else SUPPORTED_MODELS
     for name in models:
         print(f"{name}: {'downloaded' if model_is_cached(name) else 'not downloaded'}")
     print("Audio/video formats: handled by faster-whisper/PyAV")
+
+
+def find_apple_binary() -> Path | None:
+    script_dir = Path(__file__).resolve().parent
+    candidates = [
+        script_dir / APPLE_BINARY_NAME,
+        script_dir / ".build" / "out" / "Products" / "Release" / APPLE_BINARY_NAME,
+        script_dir / ".build" / "release" / APPLE_BINARY_NAME,
+        script_dir / ".build" / "arm64-apple-macosx" / "release" / APPLE_BINARY_NAME,
+    ]
+    for candidate in candidates:
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return candidate
+    return None
+
+
+def resolve_engine(requested: str) -> str:
+    if requested == "apple":
+        if find_apple_binary() is None:
+            raise SystemExit(
+                "Apple Speech backend is not built. Run ./install.sh on macOS 27+, "
+                "or use --engine faster-whisper."
+            )
+        return "apple"
+    if requested == "auto" and find_apple_binary() is not None:
+        return "apple"
+    return "faster-whisper"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -114,6 +144,12 @@ def build_parser() -> argparse.ArgumentParser:
         default="small.en",
         choices=SUPPORTED_MODELS,
         help="Whisper model; English recordings can use the .en variants (default: small.en)",
+    )
+    parser.add_argument(
+        "--engine",
+        choices=("auto", "apple", "faster-whisper"),
+        default="auto",
+        help="transcription backend (default: auto; Apple first when built)",
     )
     parser.add_argument(
         "-o",
@@ -168,9 +204,24 @@ def transcribe(args: argparse.Namespace) -> str:
     return "\n".join(segment.text.strip() for segment in segments).strip() + "\n"
 
 
+def transcribe_with_apple(args: argparse.Namespace) -> str:
+    binary = find_apple_binary()
+    if binary is None:
+        raise SystemExit("Apple Speech backend is not built.")
+    command = [str(binary)]
+    if args.language:
+        command.extend(["--language", args.language])
+    command.append(str(args.input))
+    result = subprocess.run(command, check=False, text=True, capture_output=True)
+    if result.stderr:
+        print(result.stderr, end="", file=sys.stderr)
+    if result.returncode != 0:
+        raise SystemExit(result.returncode)
+    return result.stdout
+
+
 def main() -> int:
     args = build_parser().parse_args()
-    ensure_dependency()
 
     if args.check:
         print_status(args.model)
@@ -178,7 +229,13 @@ def main() -> int:
     if args.input is None:
         raise SystemExit("input is required unless --check is used")
 
-    transcript = transcribe(args)
+    engine = resolve_engine(args.engine)
+    print(f"Engine: {engine}", file=sys.stderr)
+    if engine == "apple":
+        transcript = transcribe_with_apple(args)
+    else:
+        ensure_dependency()
+        transcript = transcribe(args)
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(transcript, encoding="utf-8")
