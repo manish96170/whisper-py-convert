@@ -8,6 +8,25 @@ A standalone command-line wrapper with native and portable local transcription b
 
 It supports audio/video formats including MP3 and MP4.
 
+## How it works
+
+```mermaid
+flowchart LR
+    A[Audio or video file] --> B[whisper-py-convert CLI]
+    B --> C{--engine auto}
+    C -->|macOS 27+ binary| D[Apple SpeechAnalyzer]
+    C -->|Windows helper installed| E[Windows AI Speech]
+    C -->|fallback| F[faster-whisper 1.2.1]
+    D --> G[Common transcript model]
+    E --> G
+    F --> G
+    G --> H[Plain text]
+    G --> I[SRT subtitles]
+```
+
+The project keeps one command-line interface while selecting the best local
+engine available on the machine.
+
 ## Install the command
 
 From this directory:
@@ -76,6 +95,16 @@ and otherwise uses faster-whisper. Native OS backends do not use `--model`.
 
 ## Subtitle timestamps
 
+```mermaid
+flowchart LR
+    A[Transcription] --> B[Transcript]
+    B --> C{Output timing}
+    C -->|--seg-ts| D[One SRT cue per segment]
+    C -->|--word-ts| E[One SRT cue per word]
+    D --> F[recording.srt]
+    E --> G[recording-word.srt]
+```
+
 Segment-level SRT:
 
 ```sh
@@ -106,6 +135,14 @@ models for multilingual recordings.
 - Only the selected model is loaded into memory. You can keep both models
   downloaded and switch with `--model`.
 - Progress messages go to stderr, leaving stdout clean for transcript output.
+
+## Backend comparison
+
+| Backend | Runs locally | Audio/video files | Segment timing | Word timing | Main requirement |
+| --- | --- | --- | --- | --- | --- |
+| Apple SpeechAnalyzer | Yes | Yes | Yes | Yes | macOS 27+ |
+| Windows AI Speech | Yes | Yes | Not exposed by current helper | Not exposed by current helper | Windows 11 24H2+, supported hardware, MSIX |
+| faster-whisper | Yes | Yes | Yes | Yes | Python and downloaded Whisper model |
 
 ## Project layout
 

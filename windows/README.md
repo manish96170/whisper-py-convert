@@ -4,6 +4,18 @@ This optional helper uses the Windows AI Speech API rather than Whisper. It
 transcribes audio on the Windows machine and writes plain transcript text to
 stdout so the Python wrapper can use it as an engine.
 
+```mermaid
+flowchart TD
+    A[recording.wav] --> B[Python wrapper]
+    B --> C[Windows helper MSIX]
+    C --> D{Windows AI model ready?}
+    D -->|no| E[EnsureReadyAsync]
+    E --> F[Windows-managed on-device model]
+    D -->|yes| F
+    F --> G[BatchRecognition.RecognizeFromFile]
+    G --> H[Plain transcript stdout]
+```
+
 ## Requirements
 
 - Windows 11 24H2 (build 26100) or later
@@ -21,6 +33,16 @@ prepared it. See Microsoft’s prerequisites before distributing this helper:
 <https://learn.microsoft.com/en-us/windows/ai/apis/speech-recognition>
 
 ## Build
+
+```mermaid
+flowchart LR
+    A[Windows 11 24H2+] --> B[.NET 8 SDK]
+    B --> C[Windows App SDK]
+    C --> D[MSIX package]
+    D --> E[systemAIModels capability]
+    E --> F[Signed helper executable]
+    F --> G[--engine windows]
+```
 
 From PowerShell in the repository root:
 

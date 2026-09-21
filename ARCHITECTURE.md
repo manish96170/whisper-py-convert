@@ -2,22 +2,22 @@
 
 ## Runtime flow
 
-```text
-CLI arguments
-    |
-    v
-whisper-py-convert.py
-    |
-    +-- --engine apple --------> whisper-py-convert-apple
-    |                              SpeechAnalyzer
-    |                              SpeechTranscriber
-    |                              Apple-managed local assets
-    |
-    +-- --engine faster-whisper -> faster-whisper 1.2.1
-                                   Systran CTranslate2 model cache
-    |
-    +-- --engine windows -------> whisper-py-convert-windows.exe
-                                   Windows AI Speech batch recognition
+```mermaid
+flowchart TD
+    CLI[CLI arguments] --> PY[whisper-py-convert.py]
+    PY --> SELECT{Engine selection}
+    SELECT -->|apple| APP[whisper-py-convert-apple]
+    APP --> SA[SpeechAnalyzer + SpeechTranscriber]
+    SA --> AS[Apple-managed speech assets]
+    SELECT -->|windows| WIN[whisper-py-convert-windows.exe]
+    WIN --> WAS[Windows AI Speech batch recognition]
+    SELECT -->|faster-whisper| FW[faster-whisper 1.2.1]
+    FW --> HF[Hugging Face CTranslate2 cache]
+    SA --> MODEL[Common Transcript]
+    WAS --> MODEL
+    FW --> MODEL
+    MODEL --> TEXT[Plain text]
+    MODEL --> SRT[SRT renderer]
 ```
 
 The Python file is the stable command-line boundary. It owns argument parsing,
@@ -43,6 +43,20 @@ the assets are installed.
 
 ## Apple backend lifecycle
 
+```mermaid
+sequenceDiagram
+    participant P as Python wrapper
+    participant S as Swift helper
+    participant M as macOS Speech assets
+    participant A as SpeechAnalyzer
+    P->>S: input + JSON timing mode
+    S->>M: check/install locale assets
+    S->>A: stream AVAsset audio
+    A-->>S: finalized transcript results
+    S-->>P: JSON segments and timed words
+    P-->>P: render text or SRT
+```
+
 `Sources/WhisperAppleTranscribe/main.swift` performs these steps:
 
 1. Validate the input path and requested locale.
@@ -63,6 +77,26 @@ currently returns plain text; timed subtitle output should use faster-whisper
 until the Windows API exposes the required timing metadata in a stable release.
 
 ## Timestamp model
+
+```mermaid
+classDiagram
+    class Transcript {
+      segments: Segment[]
+    }
+    class Segment {
+      start: seconds
+      end: seconds
+      text: string
+      words: Word[]
+    }
+    class Word {
+      start: seconds
+      end: seconds
+      text: string
+    }
+    Transcript "1" *-- "many" Segment
+    Segment "1" *-- "many" Word
+```
 
 The Python layer normalizes timed backends into:
 
@@ -93,6 +127,21 @@ Do not make the Python wrapper depend on Apple-only imports. Do not make the
 Apple binary depend on Python or faster-whisper.
 
 ## Installation and caches
+
+```mermaid
+flowchart LR
+    R[Clone repository] --> I[./install.sh]
+    I --> P[Install Python wrapper]
+    I --> S{Swift available?}
+    S -->|yes on macOS| B[Build Apple helper]
+    S -->|no| F[Faster-whisper fallback]
+    B --> BIN[~/.local/share/whisper-py-convert]
+    P --> BIN
+    RUN[First transcription] --> CACHE{Required assets cached?}
+    CACHE -->|no| DL[Download local model/assets]
+    CACHE -->|yes| USE[Run locally]
+    DL --> USE
+```
 
 `install.sh` copies the Python entrypoint and, on a Mac with Swift, builds and
 copies the Apple executable into:

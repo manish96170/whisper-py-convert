@@ -4,6 +4,17 @@ The repository does not currently ship a browser frontend. A browser cannot
 directly call Apple SpeechAnalyzer or Windows AI Speech because those native
 system APIs are outside the browser sandbox.
 
+```mermaid
+flowchart LR
+    A[Browser upload] --> B{Browser capability}
+    B -->|Web Speech API| C[Variable browser service/local support]
+    B -->|Future WASM/WebGPU| D[Browser-local Whisper model]
+    C --> E[Compatibility and privacy tradeoffs]
+    D --> F[Large model download and browser RAM]
+    E --> G[Not current product path]
+    F --> G
+```
+
 The Web Speech API is useful for microphone experiments, but its recognition
 engine and offline behavior vary by browser. The `processLocally` option and
 language-pack APIs are not available consistently enough to make them the main
@@ -11,10 +22,11 @@ upload-recording path.
 
 For a future browser upload tool, the realistic local architecture is:
 
-```text
-browser file upload
-    -> WebAssembly/WebGPU speech model
-    -> transcript/SRT in the browser
+```mermaid
+flowchart LR
+    A[Browser file upload] --> B[WASM/WebGPU speech model]
+    B --> C[Common transcript model]
+    C --> D[Transcript or SRT in browser]
 ```
 
 The current Python `faster-whisper` package cannot be imported directly into a
