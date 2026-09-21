@@ -1,8 +1,9 @@
 # whisper-py-convert
 
-A standalone command-line wrapper with two local transcription backends:
+A standalone command-line wrapper with native and portable local transcription backends:
 
 - Apple SpeechAnalyzer/SpeechTranscriber on macOS 27+
+- Windows AI Speech on supported Windows 11 24H2+ systems
 - `faster-whisper==1.2.1` everywhere else
 
 It supports audio/video formats including MP3 and MP4.
@@ -65,13 +66,32 @@ Choose a backend explicitly:
 
 ```sh
 whisper-py-convert --engine apple recording.mp4 > transcript.txt
+whisper-py-convert --engine windows recording.wav > transcript.txt
 whisper-py-convert --engine faster-whisper --model small.en recording.mp4 > transcript.txt
 ```
 
 `--engine auto` is the default. It uses the Apple backend when the native
-binary is installed and otherwise uses faster-whisper. The Apple backend does
-not use `--model`; macOS selects its installed speech model for the requested
-locale.
+binary is installed, then the Windows backend when its helper is installed,
+and otherwise uses faster-whisper. Native OS backends do not use `--model`.
+
+## Subtitle timestamps
+
+Segment-level SRT:
+
+```sh
+whisper-py-convert recording.mp4 --srt --seg-ts > recording.srt
+```
+
+Word-level SRT:
+
+```sh
+whisper-py-convert recording.mp4 --srt --word-ts > recording-word.srt
+```
+
+`faster-whisper` supplies explicit segment and word timings. Apple’s backend
+uses `SpeechTranscriber` audio-time-range attributes for word timings. The
+Windows native backend currently returns plain text only, so use
+faster-whisper for timed subtitles on Windows.
 
 Use `--language en` when the recording is known to be English. Omit `.en`
 models for multilingual recordings.
@@ -92,6 +112,8 @@ models for multilingual recordings.
 ```text
 Package.swift                         Swift package for the Apple backend
 Sources/WhisperAppleTranscribe/       Swift SpeechAnalyzer CLI
+windows/                              Optional Windows AI Speech helper
+BROWSER.md                            Deferred browser-local design notes
 whisper-py-convert.py                 Cross-platform Python dispatcher
 install.sh                            Builds and installs the command
 ```
@@ -106,5 +128,7 @@ guide.
 
 - Python 3.9+ for the Python wrapper and faster-whisper backend
 - macOS 27+ and Swift 6/Xcode Command Line Tools for the Apple backend
+- Windows 11 24H2+, Windows App SDK, supported hardware, and MSIX packaging for
+  the Windows native backend; see [windows/README.md](windows/README.md)
 - Network access only when installing packages or downloading first-use model
   assets; transcription itself is local after the assets are installed

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows10.0.26100.0</TargetFramework>
+    <Platforms>x64;ARM64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <AssemblyName>whisper-py-convert-windows</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <WindowsPackageType>MSIX</WindowsPackageType>
+    <EnableMsixTooling>true</EnableMsixTooling>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The Windows AI Speech API is experimental in current Windows App SDK releases. -->
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.1" />
+  </ItemGroup>
+</Project>
