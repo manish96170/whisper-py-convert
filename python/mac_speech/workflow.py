@@ -42,6 +42,7 @@ import time
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from threading import Event
 from typing import Any, Iterator
 
 from .align import align_via_stt_roundtrip
@@ -108,14 +109,8 @@ class WorkflowPaths:
     lock: Path
 
 
-def prepare_workflow_paths(
-    output_dir: str, *, basename: str = "narration", align: bool = True, force: bool = False
-) -> WorkflowPaths:
-    """Validate a single scene's managed paths before any speech side effect.
-
-    Parent directories must be trusted; this is not a sandbox against an
-    actor who can concurrently rename/replace the workspace directory.
-    """
+def validate_basename(basename: str) -> None:
+    """Validate a managed filename component without creating a directory."""
     if (
         not isinstance(basename, str) or not basename.strip() or basename in {".", ".."}
         or "/" in basename or "\\" in basename
@@ -126,6 +121,17 @@ def prepare_workflow_paths(
             message="Workflow basename must be a non-empty filename component, not a path.",
             remedy="Use a scene name such as scene-01, without separators or control characters.",
         )
+
+
+def prepare_workflow_paths(
+    output_dir: str, *, basename: str = "narration", align: bool = True, force: bool = False
+) -> WorkflowPaths:
+    """Validate a single scene's managed paths before any speech side effect.
+
+    Parent directories must be trusted; this is not a sandbox against an
+    actor who can concurrently rename/replace the workspace directory.
+    """
+    validate_basename(basename)
     try:
         directory = Path(output_dir).expanduser().resolve()
         directory.mkdir(parents=True, exist_ok=True)
@@ -148,7 +154,7 @@ def prepare_workflow_paths(
 
 
 @contextmanager
-def _claim_workflow(paths: WorkflowPaths) -> Iterator[None]:
+def claim_output_path(lock: Path, *, retain_event: Event | None = None) -> Iterator[None]:
     """Exclusive cooperative marker; force never bypasses an active marker.
 
     A process crash can leave a marker. Do not guess that it is stale or
@@ -156,7 +162,7 @@ def _claim_workflow(paths: WorkflowPaths) -> Iterator[None]:
     or inspect it only after confirming no corresponding run is active.
     """
     try:
-        descriptor = os.open(paths.lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        descriptor = os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     except FileExistsError as exc:
         raise MacSpeechError(
             code=ErrorCode.OUTPUT_EXISTS,
@@ -178,15 +184,16 @@ def _claim_workflow(paths: WorkflowPaths) -> Iterator[None]:
     finally:
         failure = sys.exc_info()[1]
         unconfirmed = failure is not None and getattr(failure, "_mac_speech_native_unconfirmed", False)
+        unconfirmed = unconfirmed or (retain_event is not None and retain_event.is_set())
         cleanup_failure = None
         try:
             os.close(descriptor)
         except OSError as exc:
             cleanup_failure = exc
         try:
-            current = paths.lock.lstat()
+            current = lock.lstat()
             if not unconfirmed and owned is not None and (current.st_dev, current.st_ino) == (owned.st_dev, owned.st_ino):
-                paths.lock.unlink()
+                lock.unlink()
         except FileNotFoundError:
             pass
         except OSError as exc:
@@ -200,6 +207,12 @@ def _claim_workflow(paths: WorkflowPaths) -> Iterator[None]:
                     message="Could not clean up this workflow's marker; completed artifacts were retained.",
                     remedy="Inspect permissions and use a fresh basename; do not remove an active run's marker.",
                 ) from cleanup_failure
+
+
+@contextmanager
+def _claim_workflow(paths: WorkflowPaths) -> Iterator[None]:
+    with claim_output_path(paths.lock):
+        yield
 
 
 def new_manifest(source_text: str) -> WorkflowManifest:

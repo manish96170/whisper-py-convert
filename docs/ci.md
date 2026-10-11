@@ -20,14 +20,14 @@ are mocked wrapper tests, not proof of native-engine support on Intel Macs:
   `E4`, `E7`, `E9`, and `F` catch import, syntax, and Pyflakes correctness
   issues across `python/mac_speech`; this is not a formatting migration.
 - **Types:** mypy 1.15.0 on Python 3.11, with Python 3.9 as its target and
-   `strict = true` for the 17 files explicitly listed in `pyproject.toml`.
+   `strict = true` for the 18 files explicitly listed in `pyproject.toml`.
 - **Installed CLI:** `mac-speech version` after the editable installation.
 - **Clean install:** a separate job builds an sdist and a wheel from it,
   installs only that wheel with `--no-index --no-deps` in a fresh venv, and
   runs `scripts/smoke_core.py --require-noneditable` with Python networking
   denied. This job checks engine-free diagnostics/validation, not native TTS.
 - **Explicit helper/safety lint:** an isolated correctness-lint command
-  checks audit/smoke/narration/lifecycle and file/workflow safety tests, outside
+  checks audit/smoke/narration/lifecycle, file/workflow and batch/cancellation tests, outside
   Ruff's package-only configured include list.
 - **Offline inventory:** the quality job reports the empty base dependency
   surface and unresolved project license. It does not run `--check` or
@@ -54,7 +54,7 @@ sandbox for subprocesses or Apple's services.
 The strict gate checks configuration, error/result models, logging helpers,
 alignment/workflow orchestration, the STT adapter and its models/SRT/WebVTT
 helpers, TTS result models, the native protocol/TTS process wrapper, and the
-exporter interface/local-copy adapter and atomic file I/O module.
+exporter interface/local-copy adapter, atomic file I/O and bounded batch module.
 It checks annotated function bodies, requires complete function annotations,
 checks return types, and rejects unparameterized generics and unused ignores.
 
@@ -151,6 +151,11 @@ Build/test operations do not require network access. Pre-installing a
 toolchain is separate from runtime use of the offline speech core.
 
 ## Verification and limits
+
+The Phase 13A source was later explicitly authorized and pushed as
+`56cb3bb`; [run 38145240085](https://github.com/manish96170/whisper-py-convert/actions/runs/38145240085)
+also completed successfully. This does **not** verify newer uncommitted
+Phase 13B changes, including the 18th type target and batch/cancellation code.
 
 The Phase 12 baseline was explicitly authorized, committed and pushed as
 `cdd74dd`. [Run 38117411339](https://github.com/manish96170/whisper-py-convert/actions/runs/38117411339)

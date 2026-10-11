@@ -11,6 +11,7 @@ import Testing
         #expect(ErrorCode.protocolVersionMismatch.exitCode == 5)
         #expect(ErrorCode.nativeProcessError.exitCode == 6)
         #expect(ErrorCode.timeout.exitCode == 124)
+        #expect(ErrorCode.cancelled.exitCode == 130)
         #expect(ErrorCode.notImplemented.exitCode == 10)
         #expect(ErrorCode.internalError.exitCode == 1)
     }
@@ -23,6 +24,7 @@ import Testing
         #expect(ErrorCode.protocolVersionMismatch.rawValue == "protocol_version_mismatch")
         #expect(ErrorCode.nativeProcessError.rawValue == "native_process_error")
         #expect(ErrorCode.timeout.rawValue == "timeout")
+        #expect(ErrorCode.cancelled.rawValue == "cancelled")
         #expect(ErrorCode.notImplemented.rawValue == "not_implemented")
         #expect(ErrorCode.internalError.rawValue == "internal_error")
     }

@@ -85,6 +85,12 @@ separately; no remote setup or credentials are part of this workflow.
 
 ## Existing TTS-only examples
 
+For a finite multi-scene WAV batch, see
+[batch-synthesis.md](../docs/batch-synthesis.md) and
+[batch_scenes.json](batch_scenes.json). It defaults to one worker, supports
+explicit capped parallelism, preserves per-scene results and does not call STT
+or exporters.
+
 These remain independent of STT:
 
 - [tts_python_script.py](tts_python_script.py): voice listing, playback, and file

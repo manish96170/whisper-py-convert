@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "scenes": [
+    {
+      "basename": "scene-01",
+      "text": "Welcome to this short local narration example.",
+      "language": "en-US"
+    },
+    {
+      "basename": "scene-02",
+      "text": "Each scene keeps its own audio and private checkpoint.",
+      "language": "en-US"
+    },
+    {
+      "basename": "scene-03",
+      "text": "The batch runs locally without a cloud account.",
+      "language": "en-US"
+    }
+  ]
+}

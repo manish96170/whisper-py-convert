@@ -2,10 +2,12 @@
 include python/README.md
 include docs/packaging.md
 include docs/sbom.md
+include docs/batch-synthesis.md
 include docs/decisions/ADR-002-packaging-and-distribution.md
 recursive-include tests/unit *.py
 # Standalone Python helpers exercised by the packaged unit tests.
 include examples/narration_workflow.py
+include examples/batch_scenes.json
 include scripts/smoke_core.py
 include scripts/audit_dependencies.py
 

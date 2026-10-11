@@ -11,6 +11,7 @@ public enum ErrorCode: String, Codable, Sendable {
     case protocolVersionMismatch = "protocol_version_mismatch"
     case nativeProcessError = "native_process_error"
     case timeout = "timeout"
+    case cancelled = "cancelled"
     case notImplemented = "not_implemented"
     case internalError = "internal_error"
 
@@ -25,6 +26,7 @@ public enum ErrorCode: String, Codable, Sendable {
         case .protocolVersionMismatch: return 5
         case .nativeProcessError: return 6
         case .timeout: return 124
+        case .cancelled: return 130
         case .notImplemented: return 10
         case .internalError: return 1
         }

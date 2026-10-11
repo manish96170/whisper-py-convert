@@ -1,6 +1,6 @@
 # Mac Speech Toolkit --- Phased Product and Engineering Plan
 
-**Status:** Phase 13A output-safety hardening locally complete; packaged release blocked on license\
+**Status:** Phase 13A committed/CI-verified; Phase 13B batch synthesis locally complete\
 **Purpose:** A durable implementation plan for GPT, Codex, Claude Code,
 OpenCode, or other local coding agents.\
 **Primary platform:** macOS on Apple Silicon, starting with the user's
@@ -16,7 +16,9 @@ interfaces and repository boundaries are in `python/README.md` and
 `docs/verification.md`. Phase 6's explicitly deferred model work remains
 deferred and native STT risk #19 remains open. The user has now authorized
 Phase 13; the bounded Phase 13A output-safety slice below is locally complete.
-The broader optional Phase 13 backlog remains deferred, not completed.
+The broader optional Phase 13 backlog remains deferred, not completed. The
+user authorized the 13A source push, then continuation to the bounded batch
+synthesis slice in 13B, now locally complete. Packaged release remains license-blocked.
 
 ------------------------------------------------------------------------
 
@@ -1146,12 +1148,80 @@ models or providers need separate dependency/license/download/destination
 decisions. Broader privacy/retention/audit automation is also deferred beyond
 the implemented output controls. Unchecked candidates are not completion claims.
 
+### Phase 13B — bounded local batch synthesis
+
+**Scope:** generate WAV audio for a finite set of narration scenes without
+manually invoking the per-scene workflow each time. No STT/alignment,
+playback, exports, model downloads, daemon or new runtime dependency.
+Default one worker; explicit parallelism is capped. Reuse the 13A path,
+publication, claim and checkpoint protections rather than bypass them.
+
+Checklist (mark only with verified evidence):
+
+- [x] Typed Python batch API and versioned JSON scene input/ordered report.
+- [x] CLI entry point, strict input/duplicate/output validation and private
+  metadata without source text or raw engine diagnostics.
+- [x] Bounded in-flight queue/workers, per-scene partial failures and explicit
+  force behavior, retaining successful outputs.
+- [x] Cooperative cancellation that stops/reaps active native writers, drains
+  owned work and retains claims for unconfirmed cleanup.
+- [x] Tests for limits, collisions, partial failure, report ownership,
+  cancellation and CLI/core isolation.
+- [x] Real offline batch example, performance/resource observations, packaging
+  and quality checks, separate review and current docs/handoff.
+
+Status: **locally complete**, with independent review findings resolved and
+rechecked. Phase 13A source was pushed as
+`56cb3bbae469afb91b82751617bcab1c08942ea8`; hosted CI run `38145240085`
+completed successfully. The user authorized that transaction only; new 13B
+implementation must not be committed/pushed automatically. After local
+completion, the user separately requested committing/pushing Phase 13B;
+verify that transaction's actual outcome rather than infer it from this snapshot.
+
+Evidence (2026-10-11, local uncommitted changes after `56cb3bb`):
+
+- `mac_speech.batch` typed API and `mac-speech tts batch` consume strict schema-1
+  scene JSON, default to one worker (explicit cap 1–4), and limit batches to
+  1000 scenes. Native admission waits for acknowledged Future registration;
+  at most the worker cap is submitted/in-flight. Reports preserve input order.
+- Aggregate and per-scene checkpoints are private, inode-owned and sanitized;
+  source text/raw backend diagnostics are absent. Ordinary failures retain
+  successful scenes and continue others. Unsafe native/I/O drain stops new
+  submissions and retains claims. Cancelled error code is additive, exit 130.
+- One owned communication exchange delivers complete long stdin/EOF while
+  cancellation is monitored. Actual delayed-reader/backpressure regressions
+  delivered 200,000 characters; reviewer also verified 250,000 mixed-Unicode
+  characters with SHA-256. Interrupted thread startup, abandoned admission,
+  real synthetic-child cancellation and NUL/surrogate validation are covered.
+- Repository Python 3.11.3: **431 passed, four existing native STT skips**.
+  Mocked source suites on 3.12.5/3.13.7/3.14.8: **431 passed each** using
+  existing pure-Python pytest tooling/PYTHONPATH, not fresh installations.
+  Ruff and strict mypy pass across **18 source files**; **42 new tests**.
+- Isolated native check returned **exit 0**, **48 Swift tests passed** and
+  release build succeeded, including matching cancelled-code mapping. The
+  known TestingMacros diagnostic triggered a narrow private-cache/plugin
+  retry; no global caches or preserved STT code were changed.
+- Wheel rebuilt **from its sdist**, modules byte-checked against current
+  source. Extracted package suite: **420 passed, 15 expected skips**.
+  Fresh non-editable 3.11.3 wheel/pip check and real three-scene batch passed
+  with stripped credential environment/macOS network denial, valid WAVs,
+  private ordered report/checkpoints, repeat refusal and claim cleanup.
+- Current real three-scene local sample: **4.163 s at one worker**, **2.206 s
+  at two**, on M1 Pro/macOS 27.0.1 with installed ordinary system voices.
+  This measured workload/cached-host result is not a universal speedup,
+  energy/RSS claim or timing threshold. No runtime dependency was added.
+
+The broader candidate backlog remains optional/deferred. This slice does not
+transcribe, align, play, export, watch folders, provision voices, download models,
+repair protected STT or publish packages. Public license and older/native platform
+gates remain. `docs/batch-synthesis.md` gives the runnable example and limits.
+
 Candidate enhancements: - \[ \] Voice and language capability matrix by
 macOS version. - \[ \] More output formats, with explicit codec
 validation. - \[ \] Better long-form synthesis, chunk stitching, and
 silence trimming. - \[ \] Optional local web service or IPC server for
 multiple client applications, if demand justifies a persistent
-service. - \[ \] Queueing and bounded concurrency for batch synthesis. -
+service. - \[x\] Queueing and bounded concurrency for batch synthesis (13B). -
 \[ \] Optional audio normalization or post-processing through a
 separately installed open-source tool. - \[ \] Additional open-source
 TTS engines behind the same interface. - \[ \] Additional storage

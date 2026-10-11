@@ -26,6 +26,7 @@ class ErrorCode(str, Enum):
     PROTOCOL_VERSION_MISMATCH = "protocol_version_mismatch"
     NATIVE_PROCESS_ERROR = "native_process_error"
     TIMEOUT = "timeout"
+    CANCELLED = "cancelled"
     NOT_IMPLEMENTED = "not_implemented"
     INTERNAL_ERROR = "internal_error"
 
@@ -39,6 +40,7 @@ EXIT_CODE_BY_ERROR: dict[ErrorCode, int] = {
     ErrorCode.PROTOCOL_VERSION_MISMATCH: 5,
     ErrorCode.NATIVE_PROCESS_ERROR: 6,
     ErrorCode.TIMEOUT: 124,
+    ErrorCode.CANCELLED: 130,
     ErrorCode.NOT_IMPLEMENTED: 10,
     ErrorCode.INTERNAL_ERROR: 1,
 }

@@ -29,6 +29,13 @@ specific reviewed revision is actually released.
 
 ### Added
 
+- Phase 13B bounded TTS-only batches: default one worker, explicit cap 1–4,
+  finite validated scene JSON, input-ordered private `batch.json` and per-scene
+  workflow checkpoints. No implicit STT, playback, export or model download.
+- Cooperative cancellation/owned I/O exchange with complete long-stdin delivery,
+  acknowledged worker admission and drain-before-release safeguards. New
+  Python/native `cancelled` error code maps to exit 130; prior codes unchanged.
+
 - Small standard-library-first `mac_speech` Python API and `mac-speech`
   CLI with version, capability, and environment diagnostics.
 - Independent native Swift TTS engine using Apple's system voices:

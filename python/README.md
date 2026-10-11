@@ -114,7 +114,7 @@ credentials. See [packaging](../docs/packaging.md) for temporary-directory
 wheel/sdist checks that do not write shared native `.build` directories.
 
 Use `bash scripts/ci_swift.sh` for isolated native tests/release builds in a
-shared checkout. [CI](../docs/ci.md) documents the 17-file strict mypy boundary
+shared checkout. [CI](../docs/ci.md) documents the 18-file strict mypy boundary
 and manual/opt-in native runner; [verification](../docs/verification.md)
 records Phase 12's final local suite, extracted-sdist, clean-wheel/offline
 TTS, and lifecycle evidence. Local verification is not a hosted-CI result or
@@ -127,6 +127,12 @@ late writer. Rebuild native TTS from the **same updated source** when upgrading
 (a Python wheel alone cannot update an already-installed engine). See
 [workflow safety and checkpoint opt-in](../docs/workflow.md) for
 `persist_manifest=True`, claim/cancellation behavior and trust limitations.
+
+Phase 13B adds `mac-speech tts batch` and `mac_speech.batch.synthesize_batch`
+for finite WAV scene lists. Default one worker, explicit cap 1–4, ordered
+private reports/checkpoints and cancellation/drain. It does not transcribe,
+play, export or download models. See [batch-synthesis](../docs/batch-synthesis.md)
+and [the public sample input](../examples/batch_scenes.json).
 
 ## Contracts and further documentation
 

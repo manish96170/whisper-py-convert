@@ -21,6 +21,8 @@ import json
 import os
 import subprocess
 import sys
+import time
+from threading import Event, Thread
 from pathlib import Path
 from typing import Any
 
@@ -113,12 +115,15 @@ def run_operation(
     force: bool = False,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
     track_pid: bool = False,
+    cancel_event: Event | None = None,
 ) -> dict[str, Any]:
     """Runs one `mac-speech-tts` invocation to completion and returns its
     `result` payload as a plain dict. Raises `MacSpeechError` for every
     failure mode: missing engine, a native-reported error, invalid JSON,
     a protocol version mismatch, or a process timeout.
     """
+    if cancel_event is not None and cancel_event.is_set():
+        raise MacSpeechError(code=ErrorCode.CANCELLED, message="Speech generation was cancelled before starting.")
     binary = resolve_binary()
     use_stdin = text is not None and len(text) > STDIN_TRANSPORT_THRESHOLD_CHARS
     command = _build_command(
@@ -155,9 +160,14 @@ def run_operation(
         if pid_file is not None:
             _write_pid_file(pid_file, process.pid)
             pid_written = True
-        stdout_data, stderr_data = process.communicate(
-            input=text if use_stdin else None, timeout=timeout + 10
-        )
+        if cancel_event is None:
+            stdout_data, stderr_data = process.communicate(
+                input=text if use_stdin else None, timeout=timeout + 10
+            )
+        else:
+            stdout_data, stderr_data = _communicate_cancellable(
+                process, text if use_stdin else None, timeout + 10, cancel_event,
+            )
     except subprocess.TimeoutExpired:
         confirmed = process is not None and _kill_and_reap(process)
         failure = MacSpeechError(
@@ -217,6 +227,11 @@ def _kill_and_reap(process: subprocess.Popen[str]) -> bool:
         except ProcessLookupError:
             pass  # It may already have exited; wait still reaps it.
         process.wait(timeout=10)
+        communicator = getattr(process, "_mac_speech_communicator", None)
+        if isinstance(communicator, Thread):
+            communicator.join(timeout=10)
+            if communicator.is_alive():
+                return False
         for pipe in (process.stdin, process.stdout, process.stderr):
             if pipe is not None:
                 try:
@@ -228,6 +243,41 @@ def _kill_and_reap(process: subprocess.Popen[str]) -> bool:
         # Includes another interrupt during cleanup. Callers propagate the
         # original exception and tag it so a workflow does not free its slot.
         return False
+
+
+def _communicate_cancellable(
+    process: subprocess.Popen[str], input_text: str | None, timeout: float, cancel_event: Event,
+) -> tuple[str, str]:
+    if cancel_event.is_set():
+        raise MacSpeechError(code=ErrorCode.CANCELLED, message="Speech generation was cancelled.")
+    complete = Event()
+    output: list[tuple[str, str]] = []
+    failures: list[BaseException] = []
+
+    def communicate() -> None:
+        try:
+            # Exactly one communicate invocation owns all stdin/output I/O.
+            # Older supported runtimes do not reliably resume unfinished
+            # input when communicate is retried with input=None.
+            output.append(process.communicate(input=input_text, timeout=timeout))
+        except BaseException as failure:
+            failures.append(failure)
+        finally:
+            complete.set()
+
+    communicator = Thread(target=communicate, name="mac-speech-io", daemon=True)
+    setattr(process, "_mac_speech_communicator", communicator)
+    communicator.start()
+    deadline = time.monotonic() + timeout
+    while not complete.wait(timeout=0.2):
+        if cancel_event.is_set():
+            raise MacSpeechError(code=ErrorCode.CANCELLED, message="Speech generation was cancelled.")
+        if time.monotonic() >= deadline:
+            raise subprocess.TimeoutExpired(process.args, timeout)
+    communicator.join()
+    if failures:
+        raise failures[0]
+    return output[0]
 
 
 def _parse_response(stdout_data: str, *, exit_code: int) -> dict[str, Any]:

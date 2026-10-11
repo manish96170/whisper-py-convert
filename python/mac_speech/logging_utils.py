@@ -15,10 +15,26 @@ logging framework, keeping the base package dependency-free.
 from __future__ import annotations
 
 import sys
+from contextlib import contextmanager
+from contextvars import ContextVar
+from typing import Iterator
+
+_QUIET: ContextVar[bool] = ContextVar("mac_speech_quiet_diagnostics", default=False)
 
 
 def diagnostic(message: str) -> None:
-    print(message, file=sys.stderr)
+    if not _QUIET.get():
+        print(message, file=sys.stderr)
+
+
+@contextmanager
+def suppress_diagnostics() -> Iterator[None]:
+    """Thread/context-local suppression; never replace global stderr."""
+    token = _QUIET.set(True)
+    try:
+        yield
+    finally:
+        _QUIET.reset(token)
 
 
 def secondary_diagnostic(message: str) -> None:

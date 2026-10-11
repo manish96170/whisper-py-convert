@@ -99,6 +99,7 @@ Response (native process -> Python), failure:
 | `protocol_version_mismatch` | 5 | Native engine and wrapper disagree on protocol version |
 | `native_process_error` | 6 | The native process ran but reported a failure |
 | `timeout` | 124 | Operation exceeded its allotted time (124 matches the common shell `timeout` convention) |
+| `cancelled` | 130 | Cooperative cancellation requested; added in Phase 13B without changing prior codes |
 | `not_implemented` | 10 | Reserved/unimplemented feature; historical Phase 1 STT/TTS stubs used this, but those operations are now implemented |
 | `internal_error` | 1 | Unexpected/unclassified failure |
 
@@ -129,6 +130,13 @@ Implemented for one-shot native TTS in Phases 2–3:
   Thus long multi-sentence saves can hit the wrapper's overall limit even if
   no individual sentence exceeds the native limit. Increase the explicit
   timeout when appropriate; do not assume a graceful SIGTERM/SIGKILL ladder.
+- Phase 13B's optional cooperative Event uses one owned communication thread
+  for complete stdin/output delivery, while the caller polls cancellation at
+  200-ms intervals. It does not repeatedly invoke `communicate(input=None)`.
+  Owned child and I/O drain are confirmed before claims are released; uncertain
+  cleanup retains claims. Normal calls without an Event keep their original
+  one-shot communication behavior. Batch worker admission also waits for its
+  Future to be registered before scene/native side effects.
 - Playback responds to SIGINT/SIGTERM (stop), SIGTSTP (pause), and SIGCONT
   (resume). Cross-process `mac-speech tts stop|pause|resume` target a tracked
   playback PID; the default single slot does not supervise concurrent jobs.

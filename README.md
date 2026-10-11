@@ -43,6 +43,7 @@ wrapper script; it never removes an existing STT installation.
 - [CI coverage and toolchain requirements](docs/ci.md)
 - [Dependency/license inventory](docs/sbom.md) and [release checklist](docs/releasing.md)
 - [Phase 13A workspace/output safety and upgrade instructions](docs/phase13-hardening.md)
+- [Phase 13B bounded local scene batches](docs/batch-synthesis.md)
 
 The toolkit is currently source-distributed for local use. Public wheel/sdist
 or native-binary publication requires resolution of the missing project license;

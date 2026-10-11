@@ -41,6 +41,7 @@ jobs:
           tests/unit/test_dependency_audit.py tests/unit/test_smoke_core.py
           tests/unit/test_narration_example.py tests/unit/test_installation_lifecycle.py
           tests/unit/test_file_io.py tests/unit/test_workflow_safety.py
+          tests/unit/test_batch.py tests/unit/test_tts_cancellation.py
       - name: Strict type check (scope in pyproject.toml)
         run: python -m mypy
       - name: Offline base dependency and license inventory (not a release gate)

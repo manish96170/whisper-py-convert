@@ -182,6 +182,38 @@ def _cmd_tts_resume(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_tts_batch(args: argparse.Namespace) -> int:
+    from .batch import scenes_from_dict, synthesize_batch
+
+    try:
+        if args.input == "-":
+            content = sys.stdin.read(8 * 1024 * 1024 + 1)
+        else:
+            with open(args.input, encoding="utf-8") as handle:
+                content = handle.read(8 * 1024 * 1024 + 1)
+        if len(content) > 8 * 1024 * 1024:
+            raise MacSpeechError(code=ErrorCode.INVALID_ARGUMENT, message="Batch input exceeds the 8 Mi-character limit.")
+        scenes = scenes_from_dict(json.loads(content))
+    except (OSError, UnicodeError, json.JSONDecodeError) as failure:
+        raise MacSpeechError(
+            code=ErrorCode.INVALID_ARGUMENT,
+            message="Cannot read batch input as UTF-8 JSON.",
+            remedy="Supply a readable scene JSON file, or --input - for stdin.",
+        ) from failure
+    result = synthesize_batch(
+        scenes, output_dir=args.output_dir, workers=args.workers, force=args.force, timeout=args.timeout,
+    )
+    if args.json:
+        print(json.dumps(result.to_dict()))
+    else:
+        for scene in result.scenes:
+            print(f"[{scene.status}] {scene.basename}: {scene.output_path or scene.error or ''}")
+        print(f"Batch report: {Path(result.output_dir) / 'batch.json'}")
+    if result.termination_unconfirmed:
+        return 1
+    return 130 if result.cancelled else (0 if result.ok else 1)
+
+
 def _cmd_tts(args: argparse.Namespace) -> int:
     if not getattr(args, "tts_command", None):
         raise MacSpeechError(
@@ -417,6 +449,15 @@ def _build_tts_subparser(subparsers: argparse._SubParsersAction) -> argparse.Arg
     resume_parser = tts_subparsers.add_parser("resume", help="resume a paused speak() call")
     _add_json_flag(resume_parser)
     resume_parser.set_defaults(tts_handler=_cmd_tts_resume)
+
+    batch_parser = tts_subparsers.add_parser("batch", help="bounded local WAV synthesis for multiple scenes")
+    _add_json_flag(batch_parser)
+    batch_parser.add_argument("--input", required=True, help="versioned UTF-8 scene JSON; - for stdin")
+    batch_parser.add_argument("--output-dir", required=True, help="trusted local batch workspace")
+    batch_parser.add_argument("--workers", type=int, default=1, help="worker cap (1–4, default: 1)")
+    batch_parser.add_argument("--timeout", type=float, default=tts_engine.DEFAULT_TIMEOUT_SECONDS, help="per-scene native timeout")
+    batch_parser.add_argument("--force", action="store_true", help="explicitly replace regular scene/report outputs")
+    batch_parser.set_defaults(tts_handler=_cmd_tts_batch)
 
     return tts_parser
 

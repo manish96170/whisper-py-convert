@@ -130,3 +130,23 @@ See [the hardening scope/benchmark](phase13-hardening.md) and current handoff
 for migration rules, claim recovery, source/binary pairing and exact local
 artifact evidence. No protected legacy STT repair or new runtime dependency
 was included.
+
+## Phase 13B local verification (2026-10-11)
+
+Uncommitted batch code after the pushed `56cb3bb` baseline has independent
+local evidence, not an additional hosted-CI result:
+
+| Check | Result / boundary |
+| --- | --- |
+| Python 3.11.3 repository | **431 passed, 4 existing native STT skips** |
+| 3.12.5 / 3.13.7 / 3.14.8 source suites | **431 passed each**, existing pytest/PYTHONPATH tooling |
+| New batch/cancellation regressions | **42 tests**; actual thread-start and delayed-reader/backpressure cases |
+| Ruff / scoped strict mypy | Pass, **18 source targets** |
+| Native enum/regressions | **48 Swift tests, release build, exit 0** with narrow known plugin retry |
+| Extracted sdist | **420 passed, 15 expected skips** |
+| Clean wheel real TTS-only batch | Local no-index/no-deps install, pip check, valid ordered WAV/checkpoints, credential-stripped/network-denied pass |
+| Review | Three startup/transport/validation findings fixed and independently rechecked |
+
+See [batch usage/trust/performance](batch-synthesis.md) for the measured
+three-scene observation and migration/cancellation limits. No STT/model/cloud
+operation is implicit, and protected legacy code remains unchanged.

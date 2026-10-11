@@ -157,7 +157,8 @@ Build in a **disposable copy** of the source to keep `build/`, `dist/`,
 egg-info, and native `.build` out of a shared checkout. Copy the intended
 Python source, `pyproject.toml`, `MANIFEST.in`, package README, referenced
 readme file, included docs (including `docs/sbom.md`), unit tests,
-`examples/narration_workflow.py`, `scripts/smoke_core.py`, and
+`examples/narration_workflow.py`, `examples/batch_scenes.json`,
+`docs/batch-synthesis.md`, `scripts/smoke_core.py`, and
 `scripts/audit_dependencies.py`; do not copy venvs, build outputs, credentials,
 audio, or models. In that copy, with a dedicated build venv:
 

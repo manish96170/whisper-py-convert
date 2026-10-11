@@ -9,6 +9,8 @@ with an actionable remedy.
 from __future__ import annotations
 
 import signal
+from threading import Event
+from typing import Any
 
 from . import engine
 from .models import SpeakResult, SynthesizeResult, Voice
@@ -92,22 +94,19 @@ def synthesize_to_file(
     format: str = "wav",
     force: bool = False,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
+    cancel_event: Event | None = None,
 ) -> SynthesizeResult:
     """Synthesizes `text` to an audio file at `output_path`. Raises
     `MacSpeechError(code=ErrorCode.OUTPUT_EXISTS)` if the file already
     exists and `force` is not set — this function never overwrites
     silently."""
-    result = engine.run_operation(
-        "save",
-        text=text,
-        voice=voice,
-        rate=rate,
-        language=language,
-        output_path=output_path,
-        format=format,
-        force=force,
-        timeout=timeout,
-    )
+    arguments: dict[str, Any] = {
+        "text": text, "voice": voice, "rate": rate, "language": language,
+        "output_path": output_path, "format": format, "force": force, "timeout": timeout,
+    }
+    if cancel_event is not None:
+        arguments["cancel_event"] = cancel_event
+    result = engine.run_operation("save", **arguments)
     return SynthesizeResult.from_dict(result)
 
 

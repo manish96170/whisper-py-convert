@@ -1,106 +1,122 @@
-# Session handoff — Phase 13A output-safety milestone
+# Session handoff — Phase 13B bounded batch synthesis
 
 **Written:** 2026-10-11. Read `PLAN.md` and this file in full; inspect actual
-Git status/diff and rerun checks before trusting any summary.
+Git status/diff and independently rerun checks before trusting the summary.
 
-## Outcome and current scope
+## Outcome and scope
 
-The user explicitly requested continuation to the next phase. **Phase 13A,
-a bounded workspace/output-safety hardening milestone, is locally complete.**
-This does not mark the entire open-ended Phase 13 candidate backlog complete.
-The separate reviewer identified cancellation/checkpoint/staging/cleanup
-issues; they were fixed and independently rechecked, including broken stderr
-and real synthetic child-process cancellation. No review findings remain.
+**Phase 13B is locally complete**, with separate reviewer findings fixed and
+rechecked. It implements the Phase 13 candidate for queueing/bounded batch
+synthesis, not every optional GUI/service/model/storage/privacy enhancement.
+Batch generation is **TTS-only WAV**: no STT/alignment, playback, exports,
+watchers/daemon, voice provisioning, neural engine/model download or new
+runtime dependency is implicit.
 
-**Verification checkpoint: changes were uncommitted.** The user subsequently
-confirmed the audio and explicitly requested committing/pushing all reviewed
-Phase 13A source/docs, retaining the earlier `main`/no-PR choices, then
-continuing the next bounded hardening slice. Generated audio/builds/caches
-and credentials are excluded. Execution follows this documentation snapshot;
-verify actual Git/local/remote state rather than preclaiming its commit ID.
-This does not authorize automatic commits of subsequent Phase 13B work.
-The previous explicitly authorized source
-commit/push completed at `cdd74dd53a97b3f21df2cee1b9bfc983d55917cc` on
-`main`/`origin/main`; that one transaction does not authorize further commits.
-[Hosted CI run 38117411339](https://github.com/manish96170/whisper-py-convert/actions/runs/38117411339)
-passed Python 3.9–3.14, quality and clean-wheel jobs; native CI was intentionally
-skipped because it is opt-in. That run verifies the earlier committed source,
-**not these uncommitted Phase 13A changes**.
+**Pre-commit verification checkpoint.** The user subsequently explicitly
+requested "commit and push Phase 13B", retaining the existing `main`/no-PR
+choices. The approved scope is reviewed source/docs only, excluding generated
+audio/builds/caches and credentials. Execution follows this documentation
+snapshot; verify actual Git/local/remote state rather than preclaiming this
+file's own commit ID. This is not permission for later automatic commits.
+The user explicitly authorized the
+prior Phase 13A commit/push and continuation. That source transaction completed
+at `56cb3bbae469afb91b82751617bcab1c08942ea8` on `origin/main` after transient
+Git HTTPS failures. Main verified the GitHub API remote ref and
+[CI run 38145240085](https://github.com/manish96170/whisper-py-convert/actions/runs/38145240085)
+success. This hosted result verifies **13A**, not these new local changes.
+No automatic 13B commit/push is authorized by the previous transaction.
 
-Prior handoffs are preserved at:
+Historical handoffs are retained under `docs/handoffs/`:
+`SESSION_HANDOFF_PHASE13A.md`, `SESSION_HANDOFF_PHASE12.md`, and
+`SESSION_HANDOFF_PHASES_0_11.md`. Their older instructions are history, not
+permission to restart work or mutate protected components.
 
-- `docs/handoffs/SESSION_HANDOFF_PHASE12.md`
-- `docs/handoffs/SESSION_HANDOFF_PHASES_0_11.md`
-
-## Constraints and release gates
+## Standing constraints / gates
 
 - `whisper-py-convert.py`, root `Package.swift`,
-  `Sources/WhisperAppleTranscribe/` and `windows/` remain untouched. The
-  existing STT locale-reservation defect (risk #19) still needs a separate
-  explicit repair decision; four native fixtures skip for it.
-- No automatic commit/push, tag, package release, signing/notarization,
-  cloud export, credential provisioning or model download was performed.
-- Base Python runtime dependencies remain empty; Swift has no external
-  package dependencies. Core tests/runtime do not require cloud credentials.
-- Public packaged release remains blocked on an authorized project license.
-  Never infer a license grant from public source availability/dependencies.
-- Only the **new native TTS** implementation was deliberately changed for
-  output safety. Rebuild/install it from matching source to get the fixes;
-  a Python wheel cannot replace an older native binary automatically.
+  `Sources/WhisperAppleTranscribe/`, and `windows/` remain untouched.
+  Existing STT locale-reservation risk #19 remains; four real fixtures skip.
+  A repair needs an explicit, separate decision.
+- No package release, tag, signing/notarization, cloud export, credentials
+  provisioning or model download was performed for 13B. Base Python runtime
+  dependencies remain empty; Swift has no external package dependencies.
+- Public packaged release still requires an authorized project license.
+  Never infer a license grant from source visibility or dependencies.
+- Native/system voices/assets must already be installed. Source/wheel
+  installation does not silently acquire models or replace native engines.
 
-## What was implemented
+## Implemented contract
 
-1. Validated filename-only managed basenames and canonical workspace paths;
-   rejected traversal/control characters and unsafe output entries before
-   directory creation/speech. Regular replacements require force; symlink,
-   directory, FIFO/socket/special outputs are refused even with force.
-2. Atomic create-if-absent hard-link publication and explicit regular-file
-   rename replacement for native audio and Python text/SRT/manifests.
-   No truncation/check-then-delete, partial-copy fallback, or late-writer wipe.
-3. Owner-only outputs (`0600`). Native TTS creates an exclusive `0700` staging
-   directory, reserves a `0600` extension-preserving file before AVFoundation,
-   and verifies inode/mode preservation before PCM writes. Timeout diagnostics
-   no longer quote the input sentence.
-4. Cooperative per-basename claims. CLI and opt-in Python
-   `persist_manifest=True` checkpoint before speech and after each attempted
-   stage. Checkpoint inode identities come from owned staging descriptors;
-   intervening independent replacement is retained/fails closed.
-5. Guarded subprocess acquisition/lifetime; known writers are killed/reaped
-   before cancellation releases their claim. Unconfirmed acquisition or
-   termination retains the claim. Original exceptions/tags survive OS-error
-   conversion, marker/PID cleanup, and failed secondary stderr warnings.
-6. Regression tests, updated example checkpoints, 17-file strict typing,
-   expanded CI lint inputs, migration/trust/cleanup documentation and local
-   overhead measurements.
+- `mac_speech.batch.BatchScene` and `synthesize_batch` provide typed local
+  batch input/results. `mac-speech tts batch --input ... --output-dir ...`
+  consumes strict schema-1 UTF-8 JSON; `--input -` reads stdin.
+- Default **one worker**, explicit range **1–4**, at most that many submitted/
+  in-flight scenes; finite **1–1000 scenes**. Scene basenames are validated
+  filename components, with duplicate case/NFC aliases rejected before I/O.
+  NUL/surrogate text or selections fail validation before creating claims.
+- Reports preserve input order and contain hashes, paths, sanitized status/
+  error/code and elapsed time—not source text/raw diagnostics. Thread-local
+  context suppression leaves ordinary logging unchanged. Generated files are
+  private and use the 13A atomic/ownership protections.
+- Each worker claims/checkpoints its scene. The coordinator owns `.batch.lock`
+  and `batch.json`; only its scheduler writes the aggregate. Ordinary scene
+  failures preserve successes and allow other scenes to continue. Regular
+  replacement is explicit; force does not bypass unverified claims.
+- Worker side effects wait until `submit` returns, its Future is registered
+  and admission acknowledged. Abandoned/unacknowledged startup cannot run
+  late scene/native work; entered workers have explicit completion markers.
+- One owned `communicate()` exchange delivers all long stdin and EOF while
+  cancellation is monitored at 200-ms intervals. The child and owned I/O
+  thread are reaped/drained before normal claim release. Queued work is
+  cancelled; successful admitted scenes remain available after interruption.
+- Unconfirmed child/thread drain stops further submissions and retains
+  relevant claims. `cancelled` is an additive Python/native error-code entry
+  with exit **130**; prior codes are unchanged. CLI returns 0 for all-success,
+  1 for partial/unconfirmed failure, 130 for confirmed cancellation, or the
+  usual structured validation/ownership error exit.
 
-## Changed files (inspect tracked diff AND untracked additions)
+## Review findings and corrections
 
-Source/config/tests:
+The reviewer initially reproduced:
 
-- `.github/workflows/ci.yml`, `pyproject.toml`
-- `python/mac_speech/file_io.py` (new)
-- `python/mac_speech/{artifacts,cli,logging_utils,workflow}.py`
-- `python/mac_speech/tts/engine.py`
-- `engines/tts-swift/Sources/MacSpeechTTSCore/Publish.swift` (new)
-- `engines/tts-swift/Sources/MacSpeechTTSCore/Synthesize.swift`
-- `engines/tts-swift/Tests/MacSpeechTTSCoreTests/PublishTests.swift` (new)
-- `examples/narration_workflow.py`
-- `tests/unit/test_file_io.py`, `tests/unit/test_workflow_safety.py` (new)
-- `tests/unit/{test_cli,test_narration_example,test_tts_engine}.py`
+1. Interrupted `Thread.start()` before executor registration allowed an
+   untracked worker/native child while the batch claim was released.
+2. Repeated `communicate(input=None)` stalled long stdin on CPython 3.11.3.
+3. Invalid argv NUL/surrogate inputs unnecessarily quarantined a workspace.
 
-Documentation:
+All were corrected and independently rerun. Reviewer checked actual startup
+interruption, delayed-reader delivery of 200,000 ASCII and 250,000 mixed-Unicode
+characters (including SHA-256), I/O startup interruption/cancellation and
+unconfirmed drain retaining both claims. No remaining serious finding was
+reported. Review was read-only and did not substitute for main's real native,
+fresh-wheel/performance/whole-suite checks below.
 
-- `PLAN.md`, `README.md`, `CHANGELOG.md`, `python/README.md`
-- `docs/{ci,formats,tts-engine,verification,workflow}.md`
-- `docs/phase13-hardening.md` (new), this handoff, and the preserved Phase 12 archive
+## Exact implementation/config/test changes
+
+- `python/mac_speech/batch.py` — new
+- `python/mac_speech/{errors,logging_utils,workflow,cli}.py`
+- `python/mac_speech/tts/{engine,client}.py`
+- `engines/tts-swift/Sources/MacSpeechTTSCore/Errors.swift`
+- `engines/tts-swift/Tests/MacSpeechTTSCoreTests/ErrorsTests.swift`
+- `tests/unit/test_batch.py`, `tests/unit/test_tts_cancellation.py` — new
+- `pyproject.toml`, `MANIFEST.in`, `.github/workflows/ci.yml`
+- `examples/batch_scenes.json` — new public sample
+- `examples/README.md`, `python/README.md`, `README.md`, `CHANGELOG.md`, `PLAN.md`
+- `docs/batch-synthesis.md` — new; `docs/{ci,packaging,protocol,verification}.md`
+- This handoff and preserved Phase 13A archive
+
+No other native implementation or preserved legacy source was changed for
+13B; native edits add matching cancellation code/exit assertions only.
+Inspect untracked additions explicitly, not just `git diff`.
 
 ## Independent final verification
 
-Repository Python 3.11.3: **389 passed, four existing STT skips**.
-Mocked source suites on 3.12.5/3.13.7/3.14.8: **389 passed each** using
-existing pure-Python pytest tooling/PYTHONPATH, not clean installations.
-Ruff/package plus explicit safety-test lint pass; strict mypy passes across
-**17 source files**, not whole-package strict typing.
+Main repository Python 3.11.3: **431 passed, four known native STT skips**.
+42 new batch/cancellation tests cover admission, limits, queue, ownership,
+partial failures, cancellation, real long-stdin backpressure and CLI isolation.
+Local 3.12.5/3.13.7/3.14.8 mocked source suites: **431 passed each** using
+existing pure-Python pytest tooling/PYTHONPATH (not fresh installs).
+Ruff/package/explicit tests pass; strict mypy passes **18 source targets**.
 
 ```sh
 .venv/bin/python -m pytest tests/unit -q -rs
@@ -109,92 +125,69 @@ Ruff/package plus explicit safety-test lint pass; strict mypy passes across
   scripts/audit_dependencies.py scripts/smoke_core.py examples/narration_workflow.py \
   tests/unit/test_dependency_audit.py tests/unit/test_smoke_core.py \
   tests/unit/test_narration_example.py tests/unit/test_installation_lifecycle.py \
-  tests/unit/test_file_io.py tests/unit/test_workflow_safety.py tests/unit/test_tts_engine.py
+  tests/unit/test_file_io.py tests/unit/test_workflow_safety.py \
+  tests/unit/test_batch.py tests/unit/test_tts_cancellation.py
 .venv/bin/python -m mypy
-```
-
-Framework runtime checks used:
-
-```sh
-PYTHONPATH="$PWD/python:$PWD/.venv/lib/python3.11/site-packages" \
-  /Library/Frameworks/Python.framework/Versions/3.12/bin/python3 \
-  -m pytest tests/unit --ignore=tests/unit/test_stt_regression_fixtures.py -q
-# Repeat with 3.13 and 3.14. Local 3.9/3.10 are still not installed/validated.
-```
-
-Native: `scripts/ci_swift.sh` returned **exit 0**, **48 tests passed** and
-release build succeeded in isolated caches. Final complete-helper logging
-used a 360-second tool limit; a prior 120-second call ran tests/build successfully
-but expired around cleanup and was **not** credited as a complete helper pass.
-A filtered attempt hit the known TestingMacros plugin omission; no shared
-global caches were deleted. Existing CLT/Testing/Sendable warnings persist.
-
-```sh
 RUNNER_TEMP="${TMPDIR%/}/opencode" bash scripts/ci_swift.sh
-# Set RUNNER_TEMP to the existing approved temp root if this path differs.
+# Use the existing approved temp directory if this path differs.
 ```
 
-### Packaging, real workflow and offline checks
+Native helper returned **exit 0**, **48 Swift tests passed**, release build
+succeeded; a narrow known TestingMacros/private-cache/plugin retry ran.
+No global caches were deleted. Existing toolchain/Sendable warnings remain.
 
-- Built a wheel **from its sdist** in a disposable source copy. Byte-compared
-  all wheel modules to actual repository source and checked README metadata,
-  conditional-only extras and Python-only archive boundaries.
-- Extracted-sdist suite explicitly importing extracted modules:
-  **378 passed, 15 skips** (11 checkout-only lifecycle checks plus four STT).
-- Clean non-editable 3.11.3 wheel: local `--no-index --no-deps` install,
-  `pip check`, engine-free and updated-native smoke passed.
-- The updated native engine was separately built/retained from current source.
-  Real TTS-only workflow produced audio/checkpoint at `0600`, removed its
-  owned marker, and refused a same-name repeat without altering audio.
-- Actual native checks used installed ordinary system voices, a minimal
-  HOME/PATH/TMPDIR/locale environment, Python audit-hook network denial and
-  macOS `sandbox-exec` network denial. No real STT/export/account was invoked.
-- Actual parent-only SIGINT, post-constructor tracing and unknown-handle
-  construction tests use harmless synthetic children, not paid speech/models.
-  The reviewer independently checked actual failed stderr `.write()` behavior.
-- Measured 30 writes each at 1 KiB/1 MiB on the local M1 Pro/macOS 27.0.1
-  temp filesystem: hardened median **1.365/1.935 ms**, plain temp/replace
-  **0.667/0.986 ms**; maxima **3.679/4.790 ms** for hardened writes.
-  This is measured overhead, not a timing threshold or recommendation to
-  use the unsafe baseline. See `docs/phase13-hardening.md`.
+Packaging was rebuilt wheel-from-sdist in a disposable source copy. Wheel
+modules were byte-compared with repository source. Extracted package suite:
+**420 passed, 15 skips** (11 repository-only lifecycle checks plus four STT).
+Fresh non-editable 3.11.3 wheel installed using `--no-index --no-deps`;
+`pip check` and a real three-scene TTS-only batch passed with minimal credential
+environment and macOS network denial. WAV frames, ordered private report/
+checkpoints, repeat refusal and claim cleanup were checked.
 
-Evidence/artifacts are under the approved temp root at `phase13-tlkdpesi/`:
-`final-swift-check.log`, `final-native/`, `verified-source/`, `verified-dist/`,
-`verified-extracted/`, `clean/`, `real-scene/`, `io-benchmark.json`.
-Temporary directories can be removed later by the OS; these are **local test
-outputs**, not published or authenticated release artifacts.
+Current real three-scene sample on M1 Pro/16 GiB, macOS 27.0.1:
+**4.163 seconds at one worker**, **2.206 seconds at two**. Serial ran first;
+cache/load/voice selection matter. This is a measured sample, not a universal
+speedup, CPU/energy/RSS claim or performance threshold. Default remains one;
+in-flight admission is bounded rather than enqueuing every scene.
+
+Evidence under the approved temp root:
+
+- `phase13b-p7v6wh9f/swift-check.log`
+- `batch-verified-4n5meu7f/` (real serial/parallel output, performance JSON)
+- `batch-package-sbx1u_9u/` (source, build log, dist, extracted package, clean venv,
+  real clean-wheel batch)
+- `batch-final-wdqmftqm/` (final current included docs/manifest/public input,
+  byte-checked modules, extracted package, fresh clean-wheel offline batch)
+
+These temporary directories may be cleaned by the OS and are **not public
+release artifacts**. Final test wheel/sdist (before handoff-only updates):
 
 ```text
-abfbb7d0b91f65023c2926b3f8fb7f9a63c2c0f66ec3256e96459d5c93a021a2  mac_speech-0.1.0-py3-none-any.whl
-d0825cd69f082c72b0602bdb541be1e60c2f4f1beca46223db3526502764d38f  mac_speech-0.1.0.tar.gz
+c243bd978e0a61a1253b93c931f0fc2cec469047378f37243a194fa4ddfbdba9  mac_speech-0.1.0-py3-none-any.whl
+0fbcfc694c9c5ec2b43c1aac9191b4c26914c274bf3f7f9501168421d8eae3e8  mac_speech-0.1.0.tar.gz
 ```
 
-## Remaining limitations
+The final sdist includes the new batch document/public sample and passes
+420 tests/15 expected skips; its clean wheel runs that packaged sample offline.
+Any later packaged-input change requires a rebuild. None are authenticated
+or committed release hashes.
 
-The parent directory must be trusted; inode checks are not a hostile atomic
-compare-and-swap or protection against in-place mutation. Publication is
-**file-wise**, not an all-artifact transaction or power-loss durability promise.
-Hard-link support is required; unsupported filesystems fail closed.
-Crashes/unconfirmed children can leave markers/private staging state. A stored
-parent PID alone cannot prove all child writers stopped. Never blindly remove
-or bypass an active/unverified claim; use a fresh basename instead.
+## Limits and next actions
 
-Broader privacy/log redaction, automated retention/audit trails, batch queues,
-GUI/services/watchers, neural engines and extra providers remain unscoped
-Phase 13 candidates. Old-macOS/Intel native execution, real provider uploads,
-full current native STT success and project-license clearance remain unverified
-or blocked as previously documented. Earlier deferred boxes remain unchanged.
+Trusted parent directories, filesystem hard-link support and the 13A
+non-hostile inode assumptions remain. This is not a multi-file transaction,
+power-loss guarantee, hostile same-UID sandbox, background service or global
+limit across unrelated processes/workspaces. Unconfirmed claims are not
+automatically removed; a stored parent PID is insufficient proof of safety.
+The 200-ms polling interval is not a cancellation-latency guarantee; native
+kill/reap and I/O/worker drain can require the backstop intervals.
 
-## Next three actions
-
-1. Review the uncommitted diff and rerun checks. Rebuild/install matching TTS
-   with `./install.sh tts`, then run the safe TTS-only example in
-   `docs/phase13-hardening.md`; choose fresh scene basenames.
-2. Complete and independently verify the newly authorized Phase 13A source
-   commit/push. The older `cdd74dd` authorization was not reused; the user
-   gave a new request after testing the audio. Do not include later Phase 13B
-   implementation in this transaction or commit it automatically.
-3. Choose/authorize the project license before public packaged release.
-   Separately authorize the protected STT locale repair for full STT use,
-   or choose one justified optional next capability; do not implement the
-   entire open-ended backlog or download a model automatically.
+1. Try the public sample using `docs/batch-synthesis.md`; select fresh output
+   directories, default one worker, opt into two only when useful.
+2. Complete and independently verify the separately authorized 13B source
+   commit/push. The user gave a new explicit request; the completed `56cb3bb`
+   permission was not reused and does not grant future automatic commits.
+3. Resolve the project license before public packaged release; separately
+   authorize the protected STT locale repair or choose a justified next optional
+   capability. Earlier Phase 6/9 deferrals and other Phase 13 candidates remain
+   unchanged; do not download a model or implement GUI/services automatically.
