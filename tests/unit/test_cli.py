@@ -489,6 +489,8 @@ def test_workflow_narrate_success(monkeypatch, tmp_path, capsys):
         manifest.stages.append(
             workflow_module.WorkflowStage(name="synthesize", status="success", output_path="out.wav")
         )
+        assert kwargs["persist_manifest"] is True
+        manifest.write(tmp_path / "narration.workflow.json")
         return manifest
 
     monkeypatch.setattr(workflow_module, "run_narration_pipeline", fake_run)
@@ -510,6 +512,8 @@ def test_workflow_narrate_reports_failure_exit_code(monkeypatch, tmp_path):
         manifest.stages.append(
             workflow_module.WorkflowStage(name="synthesize", status="failed", error="no engine")
         )
+        assert kwargs["persist_manifest"] is True
+        manifest.write(tmp_path / "narration.workflow.json")
         return manifest
 
     monkeypatch.setattr(workflow_module, "run_narration_pipeline", fake_run)

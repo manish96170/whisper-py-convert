@@ -76,7 +76,8 @@ first-time Apple voice/locale provisioning can work without a download.
 .venv/bin/python -m ruff check --isolated --select E4,E7,E9,F \
   scripts/audit_dependencies.py scripts/smoke_core.py examples/narration_workflow.py \
   tests/unit/test_dependency_audit.py tests/unit/test_smoke_core.py \
-  tests/unit/test_narration_example.py tests/unit/test_installation_lifecycle.py
+  tests/unit/test_narration_example.py tests/unit/test_installation_lifecycle.py \
+  tests/unit/test_file_io.py tests/unit/test_workflow_safety.py
 .venv/bin/python -m mypy
 bash scripts/ci_swift.sh
 python3 -m py_compile whisper-py-convert.py
@@ -101,8 +102,31 @@ CI run or code-signing/notarization succeeded.
 
 Base Python dependencies are empty and both Swift manifests have no external
 package dependencies. Offline runtime assumes installed Apple assets/tooling.
-Local Python 3.9/3.10, older TTS OS/Intel execution, hosted-CI results, and live
-remote uploads/posts remain unverified; native CI is manual/opt-in. Project
+Local Python 3.9/3.10, older TTS OS/Intel execution and live
+remote uploads/posts remain unverified. The committed Phase 12 hosted run
+`38117411339` later passed Python 3.9–3.14/quality/clean-wheel jobs;
+native CI remained intentionally skipped/manual. Project
 license remains unresolved (`audit_dependencies.py --group runtime --check`
 intentionally exits 1), so no public packaged release is authorized by these
 checks. Full commands/artifact snapshots are in [SESSION_HANDOFF.md](SESSION_HANDOFF.md).
+
+## Phase 13A local verification (2026-10-11)
+
+This evidence is for uncommitted output-safety hardening after `cdd74dd`,
+not an additional hosted-CI result or a public release:
+
+| Check | Result / boundary |
+| --- | --- |
+| Repository Python 3.11.3 | **389 passed, 4 known native STT skips** |
+| Local 3.12.5 / 3.13.7 / 3.14.8 mocked source suites | **389 passed each**, reused pure-Python pytest tooling/PYTHONPATH |
+| Package/safety Ruff; scoped strict mypy | Pass; **17 source files** strictly checked |
+| Complete isolated native helper | **48 tests passed, release build succeeded, exit 0** with a sufficient timeout |
+| Extracted sdist selecting extracted modules | **378 passed, 15 expected skips** |
+| Clean wheel and updated-native network-denied TTS | `--no-index --no-deps`, `pip check`, engine-free and real TTS smoke pass |
+| Real TTS-only workflow | Private audio/checkpoint, owned marker cleanup and unchanged-name refusal pass |
+| Independent review/rechecks | Cancellation/acquisition, checkpoint ownership, private staging and failed-warning findings resolved |
+
+See [the hardening scope/benchmark](phase13-hardening.md) and current handoff
+for migration rules, claim recovery, source/binary pairing and exact local
+artifact evidence. No protected legacy STT repair or new runtime dependency
+was included.

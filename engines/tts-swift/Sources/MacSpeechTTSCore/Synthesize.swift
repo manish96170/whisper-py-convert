@@ -1,4 +1,5 @@
 import AVFoundation
+import Darwin
 import Foundation
 
 /// Validates and normalizes the `--output` path against the chosen audio
@@ -41,19 +42,14 @@ func resolveOutputURL(_ path: String, formatSpec: AudioFormatSpec) throws -> URL
 ///    can read as zero despite real audio data being present on disk.
 public func runSave(_ options: Options) throws -> SaveResult {
     let text = try resolveText(options)
-    let voice = try resolveVoice(identifier: options.voiceIdentifier, language: options.language)
     let formatSpec = try audioFormatSpec(named: options.format)
     guard let outputPathString = options.outputPath else {
         throw AppError.invalidArgument("--output is required for the 'save' operation.")
     }
     let finalURL = try resolveOutputURL(outputPathString, formatSpec: formatSpec)
 
-    if FileManager.default.fileExists(atPath: finalURL.path) && !options.force {
-        throw AppError.outputExists(
-            "Output file already exists: \(finalURL.path)",
-            remedy: "Choose a different --output path, or pass --force to overwrite."
-        )
-    }
+    try validateAudioOutput(finalURL, force: options.force)
+    let voice = try resolveVoice(identifier: options.voiceIdentifier, language: options.language)
 
     let sentences = splitIntoSentences(text)
     guard !sentences.isEmpty else {
@@ -70,9 +66,8 @@ public func runSave(_ options: Options) throws -> SaveResult {
     // testing to silently make it write a CAF container regardless of
     // `formatSpec.settings`, mislabeling the final file.
     let directory = finalURL.deletingLastPathComponent()
-    let baseName = finalURL.deletingPathExtension().lastPathComponent
-    let tempName = ".\(baseName).mac-speech-tts-\(ProcessInfo.processInfo.globallyUniqueString).tmp.\(formatSpec.fileExtension)"
-    let tempURL = directory.appendingPathComponent(tempName)
+    let staging = try createAudioStagingFile(in: directory, extension: formatSpec.fileExtension)
+    let tempURL = staging.file
 
     var audioFile: AVAudioFile?
     var totalFrames: Int64 = 0
@@ -80,6 +75,7 @@ public func runSave(_ options: Options) throws -> SaveResult {
     func cleanupTemp() {
         audioFile = nil
         try? FileManager.default.removeItem(at: tempURL)
+        _ = Darwin.rmdir(staging.directory.path)
     }
 
     for sentence in sentences {
@@ -102,6 +98,7 @@ public func runSave(_ options: Options) throws -> SaveResult {
             do {
                 if audioFile == nil {
                     audioFile = try AVAudioFile(forWriting: tempURL, settings: formatSpec.settings)
+                    try validateAudioStagingFile(staging)
                 }
                 try audioFile?.write(from: pcmBuffer)
                 totalFrames += Int64(pcmBuffer.frameLength)
@@ -130,7 +127,7 @@ public func runSave(_ options: Options) throws -> SaveResult {
         if !finished {
             cleanupTemp()
             throw AppError.timeout(
-                "Synthesis timed out after \(options.timeoutSeconds) seconds on sentence: \"\(sentence.prefix(60))\""
+                "Synthesis timed out after \(options.timeoutSeconds) seconds while generating an utterance."
             )
         }
     }
@@ -145,10 +142,13 @@ public func runSave(_ options: Options) throws -> SaveResult {
     }
 
     do {
-        if FileManager.default.fileExists(atPath: finalURL.path) {
-            try FileManager.default.removeItem(at: finalURL)
+        try publishAudioFile(tempURL, to: finalURL, force: options.force)
+        guard Darwin.rmdir(staging.directory.path) == 0 else {
+            throw AppError(code: .nativeProcessError, message: "Audio was published but staging-directory cleanup failed.")
         }
-        try FileManager.default.moveItem(at: tempURL, to: finalURL)
+    } catch let error as AppError {
+        cleanupTemp()
+        throw error
     } catch {
         cleanupTemp()
         throw AppError(code: .nativeProcessError, message: "Failed to finalize output file: \(error.localizedDescription)")

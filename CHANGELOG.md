@@ -7,6 +7,26 @@ that a `0.1.0` tag, published wheel, or signed native release exists.
 Use [the release-notes template](docs/release-notes-template.md) when a
 specific reviewed revision is actually released.
 
+### Phase 13A hardening
+
+- Managed workflow basenames cannot traverse outside their selected canonical
+  directory. Preflight rejects unsafe output entries before speech starts.
+- Native audio and Python text/SRT/manifest publication use atomic
+  create-if-absent or explicit regular-file replacement, preserving late
+  concurrent writers. Unsafe symlink/special-file entries are refused.
+- Private `0600` outputs, native `0700` staging with pre-reserved audio inode,
+  and TTS timeout errors that do not duplicate source sentences.
+- Cooperating runs claim their basename and optionally persist owned stage
+  checkpoints (`persist_manifest=True`, always enabled by the CLI). Foreign
+  checkpoint replacements fail closed instead of being silently overwritten.
+- Cancellation kills/reaps owned native writers before claim release;
+  unconfirmed acquisition/termination retains the claim. Cleanup failures
+  preserve original operation errors and cancellation.
+- **Compatibility:** raw `WorkflowManifest.write`, artifact `write_manifest`
+  and `stage_render_srt` now require `force=True` to replace existing regular
+  files. Rebuild/install native TTS from matching updated source; a wheel
+  does not replace an old native binary. These changes remain unreleased.
+
 ### Added
 
 - Small standard-library-first `mac_speech` Python API and `mac-speech`

@@ -23,6 +23,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .file_io import atomic_write_text
+
 MANIFEST_SCHEMA_VERSION = 1
 
 
@@ -100,14 +102,11 @@ def manifest_path_for(output_path: Path) -> Path:
     return output_path.with_name(output_path.name + ".manifest.json")
 
 
-def write_manifest(manifest: Manifest, output_path: Path) -> Path:
+def write_manifest(manifest: Manifest, output_path: Path, *, force: bool = False) -> Path:
     """Writes the manifest JSON sidecar next to `output_path`, atomically
     (write to a temp file, then rename)."""
     target = manifest_path_for(output_path)
-    temp = target.with_name(target.name + f".tmp-{time.time_ns()}")
-    temp.write_text(json.dumps(manifest.to_dict(), indent=2) + "\n", encoding="utf-8")
-    temp.replace(target)
-    return target
+    return atomic_write_text(target, json.dumps(manifest.to_dict(), indent=2) + "\n", force=force)
 
 
 def read_manifest(manifest_file: Path) -> dict[str, Any]:

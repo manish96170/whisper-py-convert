@@ -19,3 +19,16 @@ import sys
 
 def diagnostic(message: str) -> None:
     print(message, file=sys.stderr)
+
+
+def secondary_diagnostic(message: str) -> None:
+    """Best-effort warning only while preserving an in-flight failure.
+
+    A broken stderr pipe (or another interrupt during warning emission)
+    must not replace cancellation or erase native claim-retention state.
+    Normal diagnostics keep their existing behavior.
+    """
+    try:
+        diagnostic(message)
+    except BaseException:
+        pass

@@ -1,6 +1,6 @@
 # Mac Speech Toolkit --- Phased Product and Engineering Plan
 
-**Status:** Phase 12 locally verified; public packaged release blocked on license\
+**Status:** Phase 13A output-safety hardening locally complete; packaged release blocked on license\
 **Purpose:** A durable implementation plan for GPT, Codex, Claude Code,
 OpenCode, or other local coding agents.\
 **Primary platform:** macOS on Apple Silicon, starting with the user's
@@ -14,7 +14,9 @@ phase-specific completion notes/test counts are historical snapshots. Current
 interfaces and repository boundaries are in `python/README.md` and
 `docs/architecture.md`; final Phase 12 evidence is below and in
 `docs/verification.md`. Phase 6's explicitly deferred model work remains
-deferred, native STT risk #19 remains open, and Phase 13 has not begun.
+deferred and native STT risk #19 remains open. The user has now authorized
+Phase 13; the bounded Phase 13A output-safety slice below is locally complete.
+The broader optional Phase 13 backlog remains deferred, not completed.
 
 ------------------------------------------------------------------------
 
@@ -1062,6 +1064,88 @@ requirements.
 
 Only begin after the earlier phases deliver a stable, useful toolkit.
 
+### Phase 13A — safe workflow workspaces and atomic outputs
+
+**Scope:** harden the existing local narration workflow, not add every
+optional future capability. Demonstrated need: basename traversal can put
+files outside the requested workspace; subtitle/manifest writers overwrite
+silently; native TTS finalization can delete a concurrently created output
+even without `--force`. No protected legacy STT changes, model downloads,
+remote exports, new runtime dependencies, or automatic commits are authorized.
+
+Implementation checklist (check only after evidence):
+
+- [x] Validate managed workflow basenames and reject unsafe output entries
+  before invoking speech engines.
+- [x] Atomically publish text, subtitle, manifest and native TTS outputs
+  without clobbering another writer; make replacement explicit via `force`.
+- [x] Serialize cooperating workflow runs for the same basename, preserve
+  completed artifacts on failure, and clean up owned temporary state.
+- [x] Add regression tests for traversal, symlinks, collisions, concurrent
+  writers, cleanup and existing `--force` behavior.
+- [x] Measure local hardening overhead and verify real offline TTS,
+  packaging, Python quality gates and native Swift tests.
+- [x] Obtain a separate review, resolve findings, and update docs/handoff
+  with actual outcomes and the next human-controlled actions.
+
+Status: **locally complete**, with separate review findings resolved and
+rechecked. The broader candidate list remains an open-ended
+backlog, not a promise to implement GUI/services/models without a concrete
+need. Phase 12's committed baseline is `cdd74dd`; hosted CI run
+`38117411339` completed successfully (Python 3.9–3.14, quality and clean
+wheel jobs). The manual native job was intentionally skipped. Public
+packaged release still requires an authorized project license.
+
+Evidence (2026-10-11, local pre-commit snapshot after `cdd74dd`; the user
+subsequently explicitly requested a separate source commit/push):
+
+- Repository Python 3.11.3: **389 passed, four existing native STT skips**.
+  Mocked suites on 3.12.5/3.13.7/3.14.8: **389 passed each** via existing
+  pure-Python pytest tooling/PYTHONPATH, not clean installations.
+- Package and explicit safety-test Ruff pass; strict mypy passes across
+  **17 source files**. No base runtime dependency was added.
+- `scripts/ci_swift.sh` returned **exit 0**, **48 Swift tests passed** and
+  release build succeeded with isolated caches. An earlier filtered run hit
+  the known TestingMacros toolchain issue; no global caches were deleted.
+  A longer timeout was used for final complete-helper/cleanup verification.
+- Rebuilt a Python wheel **from its sdist**, byte-checked actual modules,
+  and ran the extracted package suite: **378 passed, 15 skips** (11
+  repository-only lifecycle checks and four native STT fixtures).
+  Clean 3.11.3 wheel/pip check and real updated-native TTS passed with
+  credential environment stripped and Python/native network denial.
+- Real TTS-only CLI workflow checkpointed audio/manifest at `0600`, removed
+  its owned marker, and refused an unchanged-name repeat without touching
+  existing audio. Native reservation tests verify `0700` staging directory,
+  pre-created `0600` file and AVFoundation inode/mode preservation.
+- Regression coverage includes actual parent-only SIGINT, post-constructor
+  and interrupted-constructor child ownership, retained unconfirmed claims,
+  foreign checkpoint replacement, symlink/FIFO/socket targets, cleanup and
+  broken-stderr warnings preserving original cancellation/errors.
+- Local file-I/O benchmark (30 samples each, 1 KiB/1 MiB): hardened median
+  **1.365/1.935 ms** versus plain temp/replace **0.667/0.986 ms**.
+  This observes roughly 0.7–1.0 ms added local write overhead, not a
+  cross-filesystem performance guarantee; see `docs/phase13-hardening.md`.
+- Protected legacy STT files/root manifest/Windows code remain unchanged.
+  Native TTS was deliberately hardened; no STT locale repair was applied.
+  No commit/push, release, cloud export, credentials setup or model download
+   was performed during Phase 13A implementation/verification. A later
+   source commit/push is now explicitly requested; verify its actual outcome.
+   Its hosted CI had not run at this checkpoint; the green hosted
+  run above belongs to the committed Phase 12 baseline only.
+
+Remaining trust/operational limits: filesystem hard-link support and trusted
+parent directories are required; publication is file-wise, not a multi-file
+transaction or hostile same-UID sandbox. A crash or unconfirmed child can
+leave a marker/private staging state; do not remove it based only on a stored
+parent PID. Broader retention/log redaction/audit trails and the optional
+candidate features below require their own scope/use case and are deferred.
+Specifically, a versioned voice matrix needs additional real OS/hardware;
+new formats/normalization need an approved concrete workload and tool/codec
+checks; queues/services/watchers/GUI need explicit user demand; new engines,
+models or providers need separate dependency/license/download/destination
+decisions. Broader privacy/retention/audit automation is also deferred beyond
+the implemented output controls. Unchecked candidates are not completion claims.
+
 Candidate enhancements: - \[ \] Voice and language capability matrix by
 macOS version. - \[ \] More output formats, with explicit codec
 validation. - \[ \] Better long-form synthesis, chunk stitching, and
@@ -1277,14 +1361,15 @@ combinations. The missing project license still blocks public packaged release.
 
 # 11. Immediate next actions
 
-1. Review the current documentation/diff and final Phase 12 evidence; do not
-   discard the shared tree or start Phase 13.
-2. Complete the separately requested, explicitly authorized commit/push
-   transaction through the main/Git agent. Its outcome and hosted-CI status
-   remain pending confirmation; record actual results rather than infer them.
-3. Resolve the authorized project license and intended publication scope
-   before any public packaged release, then follow `docs/releasing.md` and
-   validate hosted Python/manual native CI as appropriate.
+1. Review Phase 13A's uncommitted diff and rerun checks, rebuild/install TTS
+   from matching source, then try the TTS-only workflow in
+   `docs/phase13-hardening.md`. A Python wheel cannot upgrade an old engine.
+2. Explicitly authorize any next commit/push if desired. The earlier source
+   transaction completed at `cdd74dd` with successful hosted CI; it is not
+   blanket permission to commit/push these new changes.
+3. Resolve the project license before public packaged release. Separately
+   authorize the preserved STT locale-reservation repair if full STT use is
+   needed; choose a concrete next Phase 13 capability only when justified.
 
 The standing prohibition on automatic Git commits remains: authorization
 for the current requested commit/push transaction is not future permission

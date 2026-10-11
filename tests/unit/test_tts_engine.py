@@ -398,3 +398,60 @@ def test_run_operation_writes_and_removes_pid_file_when_tracking(monkeypatch, tm
     assert seen_during_call["pid_file_existed"] is True
     assert seen_during_call["pid_file_contents"] == "12345"
     assert not pid_file.exists()  # removed after the process finished
+
+
+def test_pid_cleanup_does_not_mask_cancellation(monkeypatch, tmp_path):
+    monkeypatch.setattr(engine, "resolve_binary", lambda: tmp_path / "mock-engine")
+    monkeypatch.setenv(engine.PID_FILE_ENV_VAR, str(tmp_path / "tracked.pid"))
+    failure = KeyboardInterrupt()
+    process = _fake_process("")
+    process.communicate.side_effect = failure
+    monkeypatch.setattr(engine.subprocess, "Popen", lambda *args, **kwargs: process)
+
+    def denied(path):
+        raise PermissionError("synthetic PID cleanup failure")
+
+    monkeypatch.setattr(engine, "_remove_pid_file", denied)
+    with pytest.raises(KeyboardInterrupt) as error:
+        engine.run_operation("speak", text="Public sample.", track_pid=True)
+    assert error.value is failure
+    process.kill.assert_called_once()
+    process.wait.assert_called_once_with(timeout=10)
+
+
+def test_pid_cleanup_after_success_is_structured(monkeypatch, tmp_path):
+    monkeypatch.setattr(engine, "resolve_binary", lambda: tmp_path / "mock-engine")
+    monkeypatch.setenv(engine.PID_FILE_ENV_VAR, str(tmp_path / "tracked.pid"))
+    process = _fake_process(json.dumps({"status": "ok", "protocol_version": 1, "result": {}}))
+    monkeypatch.setattr(engine.subprocess, "Popen", lambda *args, **kwargs: process)
+
+    def denied(path):
+        raise PermissionError("synthetic PID cleanup failure")
+
+    monkeypatch.setattr(engine, "_remove_pid_file", denied)
+    with pytest.raises(MacSpeechError) as error:
+        engine.run_operation("speak", text="Public sample.", track_pid=True)
+    assert error.value.code == ErrorCode.INTERNAL_ERROR
+
+
+def test_failed_pid_warning_does_not_mask_cancellation(monkeypatch, tmp_path):
+    from mac_speech import logging_utils
+
+    monkeypatch.setattr(engine, "resolve_binary", lambda: tmp_path / "mock-engine")
+    monkeypatch.setenv(engine.PID_FILE_ENV_VAR, str(tmp_path / "tracked.pid"))
+    failure = KeyboardInterrupt()
+    process = _fake_process("")
+    process.communicate.side_effect = failure
+    monkeypatch.setattr(engine.subprocess, "Popen", lambda *args, **kwargs: process)
+
+    def denied(path):
+        raise PermissionError("synthetic PID cleanup failure")
+
+    def unavailable(message):
+        raise BrokenPipeError("synthetic disconnected stderr")
+
+    monkeypatch.setattr(engine, "_remove_pid_file", denied)
+    monkeypatch.setattr(logging_utils, "diagnostic", unavailable)
+    with pytest.raises(KeyboardInterrupt) as error:
+        engine.run_operation("speak", text="Public sample.", track_pid=True)
+    assert error.value is failure

@@ -114,11 +114,19 @@ credentials. See [packaging](../docs/packaging.md) for temporary-directory
 wheel/sdist checks that do not write shared native `.build` directories.
 
 Use `bash scripts/ci_swift.sh` for isolated native tests/release builds in a
-shared checkout. [CI](../docs/ci.md) documents the 16-file strict mypy boundary
+shared checkout. [CI](../docs/ci.md) documents the 17-file strict mypy boundary
 and manual/opt-in native runner; [verification](../docs/verification.md)
 records Phase 12's final local suite, extracted-sdist, clean-wheel/offline
 TTS, and lifecycle evidence. Local verification is not a hosted-CI result or
 license-cleared public release.
+
+Phase 13A hardens output/workflow safety: basenames cannot escape a managed
+workspace, sidecar/SRT/manifest replacement is explicit, cooperating runs
+claim their basename, and text/audio publication cannot silently clobber a
+late writer. Rebuild native TTS from the **same updated source** when upgrading
+(a Python wheel alone cannot update an already-installed engine). See
+[workflow safety and checkpoint opt-in](../docs/workflow.md) for
+`persist_manifest=True`, claim/cancellation behavior and trust limitations.
 
 ## Contracts and further documentation
 

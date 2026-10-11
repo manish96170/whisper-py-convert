@@ -36,12 +36,18 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import sys
 import time
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 from .align import align_via_stt_roundtrip
+from .errors import ErrorCode, MacSpeechError
+from .file_io import atomic_write_checkpoint, atomic_write_text, check_output_path
+from .logging_utils import secondary_diagnostic
 from .stt.models import Transcript
 from .stt.srt import transcript_to_srt
 from .tts import synthesize_to_file
@@ -70,7 +76,7 @@ class WorkflowManifest:
 
     @property
     def ok(self) -> bool:
-        return all(stage.status == "success" for stage in self.stages)
+        return bool(self.stages) and all(stage.status == "success" for stage in self.stages)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -81,11 +87,119 @@ class WorkflowManifest:
             "stages": [stage.to_dict() for stage in self.stages],
         }
 
-    def write(self, path: Path) -> Path:
-        temp = path.with_name(path.name + f".tmp-{time.time_ns()}")
-        temp.write_text(json.dumps(self.to_dict(), indent=2) + "\n", encoding="utf-8")
-        temp.replace(path)
-        return path
+    def write(self, path: Path, *, force: bool = False) -> Path:
+        return atomic_write_text(path, json.dumps(self.to_dict(), indent=2) + "\n", force=force)
+
+    def write_checkpoint(
+        self, path: Path, *, force: bool = False, expected_identity: tuple[int, int] | None = None
+    ) -> tuple[int, int]:
+        return atomic_write_checkpoint(
+            path, json.dumps(self.to_dict(), indent=2) + "\n",
+            force=force, expected_identity=expected_identity,
+        )
+
+
+@dataclass(frozen=True)
+class WorkflowPaths:
+    directory: Path
+    audio: Path
+    subtitles: Path
+    manifest: Path
+    lock: Path
+
+
+def prepare_workflow_paths(
+    output_dir: str, *, basename: str = "narration", align: bool = True, force: bool = False
+) -> WorkflowPaths:
+    """Validate a single scene's managed paths before any speech side effect.
+
+    Parent directories must be trusted; this is not a sandbox against an
+    actor who can concurrently rename/replace the workspace directory.
+    """
+    if (
+        not isinstance(basename, str) or not basename.strip() or basename in {".", ".."}
+        or "/" in basename or "\\" in basename
+        or any(ord(character) < 32 or ord(character) == 127 for character in basename)
+    ):
+        raise MacSpeechError(
+            code=ErrorCode.INVALID_ARGUMENT,
+            message="Workflow basename must be a non-empty filename component, not a path.",
+            remedy="Use a scene name such as scene-01, without separators or control characters.",
+        )
+    try:
+        directory = Path(output_dir).expanduser().resolve()
+        directory.mkdir(parents=True, exist_ok=True)
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise MacSpeechError(
+            code=ErrorCode.INVALID_ARGUMENT,
+            message="Cannot prepare the workflow output directory.",
+            remedy="Choose a writable, trusted local directory.",
+        ) from exc
+    paths = WorkflowPaths(
+        directory=directory,
+        audio=directory / f"{basename}.wav",
+        subtitles=directory / f"{basename}.srt",
+        manifest=directory / f"{basename}.workflow.json",
+        lock=directory / f".{basename}.workflow.lock",
+    )
+    for path in (paths.audio, paths.manifest, *((paths.subtitles,) if align else ())):
+        check_output_path(path, force=force)
+    return paths
+
+
+@contextmanager
+def _claim_workflow(paths: WorkflowPaths) -> Iterator[None]:
+    """Exclusive cooperative marker; force never bypasses an active marker.
+
+    A process crash can leave a marker. Do not guess that it is stale or
+    unlink another writer's state automatically: choose another basename
+    or inspect it only after confirming no corresponding run is active.
+    """
+    try:
+        descriptor = os.open(paths.lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError as exc:
+        raise MacSpeechError(
+            code=ErrorCode.OUTPUT_EXISTS,
+            message="This workflow basename is already claimed by another run or an unverified marker.",
+            remedy="Use a new basename; inspect an old marker only after confirming no run is active.",
+        ) from exc
+    except OSError as exc:
+        raise MacSpeechError(code=ErrorCode.INTERNAL_ERROR, message="Cannot claim the workflow workspace.") from exc
+    owned = None
+    try:
+        owned = os.fstat(descriptor)
+        os.write(descriptor, f"{os.getpid()}\n".encode("ascii"))
+        yield
+    except OSError as exc:
+        converted = MacSpeechError(code=ErrorCode.INTERNAL_ERROR, message="Cannot manage the workflow claim.")
+        if getattr(exc, "_mac_speech_native_unconfirmed", False):
+            setattr(converted, "_mac_speech_native_unconfirmed", True)
+        raise converted from exc
+    finally:
+        failure = sys.exc_info()[1]
+        unconfirmed = failure is not None and getattr(failure, "_mac_speech_native_unconfirmed", False)
+        cleanup_failure = None
+        try:
+            os.close(descriptor)
+        except OSError as exc:
+            cleanup_failure = exc
+        try:
+            current = paths.lock.lstat()
+            if not unconfirmed and owned is not None and (current.st_dev, current.st_ino) == (owned.st_dev, owned.st_ino):
+                paths.lock.unlink()
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            cleanup_failure = exc
+        if cleanup_failure is not None:
+            if failure is not None:
+                secondary_diagnostic("Workflow marker cleanup failed; the original failure and completed artifacts were retained.")
+            else:
+                raise MacSpeechError(
+                    code=ErrorCode.INTERNAL_ERROR,
+                    message="Could not clean up this workflow's marker; completed artifacts were retained.",
+                    remedy="Inspect permissions and use a fresh basename; do not remove an active run's marker.",
+                ) from cleanup_failure
 
 
 def new_manifest(source_text: str) -> WorkflowManifest:
@@ -103,6 +217,8 @@ def stage_synthesize(
     try:
         result = synthesize_to_file(text, output_path=output_path, voice=voice, language=language, force=force)
     except Exception as exc:  # noqa: BLE001 - recorded in the manifest, not raised
+        if getattr(exc, "_mac_speech_native_unconfirmed", False):
+            raise  # Keep the claim instead of allowing another writer in.
         return WorkflowStage(name="synthesize", status="failed", error=str(exc))
     return WorkflowStage(
         name="synthesize",
@@ -139,11 +255,13 @@ def stage_align(
     return stage, transcript
 
 
-def stage_render_srt(transcript: Transcript, *, output_path: str, word_timestamps: bool = True) -> WorkflowStage:
+def stage_render_srt(
+    transcript: Transcript, *, output_path: str, word_timestamps: bool = True, force: bool = False
+) -> WorkflowStage:
     """Stage 3: aligned Transcript -> SRT file for a downstream video tool."""
     try:
         content = transcript_to_srt(transcript, word_timestamps=word_timestamps)
-        Path(output_path).write_text(content, encoding="utf-8")
+        atomic_write_text(Path(output_path), content, force=force)
     except Exception as exc:  # noqa: BLE001
         return WorkflowStage(name="render_srt", status="failed", error=str(exc))
     return WorkflowStage(
@@ -160,25 +278,42 @@ def run_narration_pipeline(
     language: str | None = None,
     align: bool = True,
     force: bool = False,
+    persist_manifest: bool = False,
 ) -> WorkflowManifest:
     """Convenience chain: text -> audio -> (optional) alignment -> SRT.
     Prefer calling `stage_synthesize`/`stage_align`/`stage_render_srt`
     directly for independent retries of a single stage."""
-    out_dir = Path(output_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    manifest = new_manifest(text)
+    paths = prepare_workflow_paths(output_dir, basename=basename, align=align, force=force)
+    with _claim_workflow(paths):
+        # Repeat preflight under our marker: another cooperating run could
+        # have completed between the first check and marker acquisition.
+        for path in (paths.audio, paths.manifest, *((paths.subtitles,) if align else ())):
+            check_output_path(path, force=force)
+        manifest = new_manifest(text)
+        checkpoint_identity = None
+        if persist_manifest:
+            checkpoint_identity = manifest.write_checkpoint(paths.manifest, force=force)
 
-    audio_path = str(out_dir / f"{basename}.wav")
-    synth_stage = stage_synthesize(text, output_path=audio_path, voice=voice, language=language, force=force)
-    manifest.stages.append(synth_stage)
-    if synth_stage.status != "success" or not align:
+        def record(stage: WorkflowStage) -> None:
+            nonlocal checkpoint_identity
+            manifest.stages.append(stage)
+            if persist_manifest:
+                # This run owns the initial checkpoint. Replacing its own
+                # checkpoint is explicit and remains inside the claim.
+                checkpoint_identity = manifest.write_checkpoint(
+                    paths.manifest, force=True, expected_identity=checkpoint_identity,
+                )
+
+        audio_path = str(paths.audio)
+        synth_stage = stage_synthesize(text, output_path=audio_path, voice=voice, language=language, force=force)
+        record(synth_stage)
+        if synth_stage.status != "success" or not align:
+            return manifest
+
+        align_stage, transcript = stage_align(audio_path, language=language)
+        record(align_stage)
+        if align_stage.status != "success" or transcript is None:
+            return manifest
+
+        record(stage_render_srt(transcript, output_path=str(paths.subtitles), force=force))
         return manifest
-
-    align_stage, transcript = stage_align(audio_path, language=language)
-    manifest.stages.append(align_stage)
-    if align_stage.status != "success" or transcript is None:
-        return manifest
-
-    srt_path = str(out_dir / f"{basename}.srt")
-    manifest.stages.append(stage_render_srt(transcript, output_path=srt_path))
-    return manifest

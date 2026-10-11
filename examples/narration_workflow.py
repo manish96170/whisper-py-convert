@@ -17,6 +17,7 @@ from contextlib import redirect_stderr
 from pathlib import Path
 
 from mac_speech import workflow
+from mac_speech.errors import MacSpeechError
 from mac_speech.stt.models import Transcript
 
 
@@ -57,14 +58,17 @@ def _error(code: str, message: str, exit_code: int) -> int:
 
 
 def _record_stage(
-    manifest: workflow.WorkflowManifest, stage: workflow.WorkflowStage, manifest_path: Path
-) -> None:
+    manifest: workflow.WorkflowManifest, stage: workflow.WorkflowStage, manifest_path: Path,
+    checkpoint_identity: tuple[int, int] | None = None,
+) -> tuple[int, int]:
     # Native exception strings can contain input/transcript text. Keep only
     # stage-level guidance in this sample's manifest and console output.
     if stage.status != "success":
         stage.error = _STAGE_FAILURES[stage.name]
     manifest.stages.append(stage)
-    manifest.write(manifest_path)
+    return manifest.write_checkpoint(
+        manifest_path, force=checkpoint_identity is not None, expected_identity=checkpoint_identity,
+    )
 
 
 def _has_usable_cues(transcript: Transcript) -> bool:
@@ -108,24 +112,25 @@ def main(argv: list[str] | None = None) -> int:
     manifest = workflow.new_manifest(text)
     manifest_path = output_dir / "narration.workflow.json"
     audio_path = output_dir / "narration.wav"
+    checkpoint_identity = None
     try:
         # The adapters forward captured native stderr, which is not a
         # privacy-safe log contract. Suppress it; report sanitized failures
         # after leaving this context. Never print the source or transcript.
         with open(os.devnull, "w", encoding="utf-8") as quiet, redirect_stderr(quiet):
             stage = workflow.stage_synthesize(text, output_path=str(audio_path), language=args.language)
-            _record_stage(manifest, stage, manifest_path)
+            checkpoint_identity = _record_stage(manifest, stage, manifest_path, checkpoint_identity)
             if stage.status == "success" and not args.synthesize_only:
                 # Explicit native selection avoids auto fallback to a neural
                 # backend that could need extra dependencies/model downloads.
                 stage, transcript = workflow.stage_align(str(audio_path), engine_name="apple", language=args.language)
                 if stage.status == "success" and (transcript is None or not _has_usable_cues(transcript)):
                     stage.status = "failed"
-                _record_stage(manifest, stage, manifest_path)
+                checkpoint_identity = _record_stage(manifest, stage, manifest_path, checkpoint_identity)
                 if stage.status == "success" and transcript is not None:
                     stage = workflow.stage_render_srt(transcript, output_path=str(output_dir / "narration.srt"))
-                    _record_stage(manifest, stage, manifest_path)
-    except OSError:
+                    checkpoint_identity = _record_stage(manifest, stage, manifest_path, checkpoint_identity)
+    except (OSError, MacSpeechError):
         return _error(
             "manifest_write_failed",
             "Cannot save workflow manifest. Any generated audio was retained; check output permissions before retrying.",

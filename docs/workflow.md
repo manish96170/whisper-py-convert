@@ -1,4 +1,4 @@
-# Workflow orchestration (Phase 11)
+# Workflow orchestration and output safety (Phases 11–13A)
 
 ## Pipeline
 
@@ -18,6 +18,7 @@ manifest = run_narration_pipeline(
     "Scene one narration text.",
     output_dir="./artifacts",
     basename="scene-01",
+    persist_manifest=True,
 )
 ```
 
@@ -29,8 +30,62 @@ referencing every stage's
 status, output path, and provenance — this is what a video renderer
 (Remotion or otherwise) reads to find artifacts, without importing any
 of `mac_speech`'s internals.
-The CLI writes `<basename>.workflow.json`; Python callers must explicitly
-persist it with `manifest.write(Path("artifacts/scene-01.workflow.json"))`.
+The CLI checkpoints `<basename>.workflow.json` before speech and after each
+attempted stage. Python callers opt into the same behavior with
+`persist_manifest=True`; the default remains a returned manifest without
+automatic persistence. A separately chosen manifest path can be written with
+`manifest.write(path)`, which now refuses existing files unless `force=True`.
+
+## Phase 13A: managed workspace and overwrite rules
+
+- `basename` must be one non-empty filename component, not a path. Absolute
+  names, `/` or `\\`, `.`/`..`, and control characters are rejected **before**
+  directory creation or an engine invocation. Unicode scene names are allowed.
+- The explicitly chosen output directory is expanded/canonicalized. Its
+  parent directories must be trusted. This is not a security sandbox against
+  someone concurrently replacing the workspace directory itself.
+- Audio, subtitles and the workflow manifest are preflighted. Existing
+  regular outputs require `force=True`/`--force`; managed symlinks, directories
+  and special-file destinations are refused even with force. An unused SRT
+  is left alone in `align=False`/`--no-align` mode.
+- Default publication is an atomic create-if-absent, not an existence check
+  followed by truncation/removal. Explicit replacement atomically replaces
+  a directory entry rather than mutating its old inode. The destination
+  filesystem must support same-filesystem hard links; unsupported filesystems
+  fail closed instead of falling back to partial writes.
+- Cooperating pipeline calls exclusively claim
+  `.<basename>.workflow.lock`. Another run cannot bypass it with force. The
+  marker is private, contains only the process ID, and is removed on normal
+  return, failure or handled Python interruption **after child termination is
+  confirmed**. Unconfirmed termination, cleanup failure, or a process/OS crash can leave
+  it: choose a new basename, or inspect that exact marker **only after verifying
+  no corresponding workflow is active**. Never blindly signal a stored PID or
+  delete another run's marker.
+- Use `persist_manifest=True` for checkpoint ownership throughout a run. The
+  CLI always does. Separately calling raw stages/manually writing a manifest
+  is not a multi-file transaction or an automatically claimed workflow.
+- Checkpoint updates verify the inode identity returned by the initial
+  publication and refresh it after each update. An intervening independent
+  replacement fails closed instead of silently overwriting another entry.
+  This is not a hostile atomic compare-and-swap or protection against someone
+  editing the owned inode in place; do not mutate an active run's checkpoint.
+- Python cancellation first kills/reaps its native TTS writer, including
+  SIGINT delivered only to the Python parent. If termination cannot be
+  confirmed, the claim is retained rather than admitting a conflicting run.
+  Interrupted process acquisition is treated conservatively when Python
+  never obtained the child handle.
+  Cleanup errors do not replace an existing failure/cancellation. A stored
+  parent PID alone is not proof that every child writer has exited.
+- New text/manifest outputs and native TTS audio are owner-only (`0600`).
+  Explicit sharing/permission changes remain the user's decision. Existing
+  source audio/transcripts are not deleted when a downstream stage fails.
+
+This is **file-wise atomic publication**, not an atomic transaction across
+all outputs or a durability guarantee against a power loss. If later
+publication/checkpointing fails, earlier complete files remain available.
+Raw backend diagnostics/stage errors can still contain sensitive information;
+the runnable example suppresses them. Broader redaction/audit/retention
+features remain separately scoped Phase 13 work.
 
 ## Runnable sample and independent retry
 
@@ -66,10 +121,11 @@ if stage.status != "success":
 ```
 
 This sequential retry does not resynthesize audio or rewrite the original
-failure manifest. The raw stage helpers do not themselves protect existing SRT
-or manifest paths; callers must manage their output workspace. The sample owns
-a newly created run directory, while the retry recipe checks its new SRT path.
-Do not run concurrent writers against the same files.
+failure manifest. Raw subtitle/manifest helpers now refuse existing files by
+default; replacing one requires an explicit `force=True`. They do not acquire
+the pipeline's workspace marker or manage a multi-file transaction. The
+sample owns a newly created run directory and explicitly checkpoints its own
+manifest; keep distinct output paths for independent retries.
 
 ## Verified: a failed later stage never invalidates an earlier artifact
 

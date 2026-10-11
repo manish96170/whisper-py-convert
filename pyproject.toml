@@ -53,6 +53,7 @@ strict = true
 # the gate via imports. See docs/ci.md for the boundary and remaining work.
 follow_imports = "silent"
 files = [
+    "python/mac_speech/file_io.py",
     "python/mac_speech/native_protocol.py",
     "python/mac_speech/tts/engine.py",
     "python/mac_speech/config.py",

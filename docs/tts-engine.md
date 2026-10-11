@@ -195,6 +195,26 @@ There is no automated end-to-end test for `speak`'s audible playback path
 was verified manually and the shared per-sentence logic it depends on is
 covered by automated tests.
 
+## Phase 13A file publication and privacy
+
+`runSave` now checks destination entry types before resolving a voice and
+again when publishing. Symlinks, directories, FIFOs and sockets are refused
+even with `--force`. Regular replacements use atomic POSIX rename; default
+publication uses atomic create-if-absent hard linking, never check-then-delete.
+Unsupported hard-link destinations fail closed instead of copying partial data.
+
+An exclusively created `0700` staging directory contains an extension-preserving
+file reserved at `0600` before AVFoundation opens it. The inode/mode is verified
+before PCM writes and remains private after publication. Owned temporary state
+is cleaned on normal completion/error; process crashes can leave private
+staging state for explicit inspection after writers are confirmed stopped.
+The synthesis timeout error no longer quotes the input sentence.
+
+Rebuild/install this engine from the same updated source as the wrapper;
+protocol compatibility alone does not upgrade an old executable's filesystem
+behavior. See [workflow hardening](phase13-hardening.md) for trust boundaries,
+cancellation and checkpoint rules. No legacy STT source changed.
+
 ## JSON protocol conformance
 
 Every invocation prints exactly one JSON document to stdout and nothing

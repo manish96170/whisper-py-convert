@@ -1,4 +1,4 @@
-# Artifact formats, manifests, and timing semantics (Phase 7)
+# Artifact formats, manifests, and timing semantics (Phases 7–13A)
 
 ## Artifact directory conventions
 
@@ -15,20 +15,28 @@ layout.
 
 ## Overwrite protection and atomic writes
 
-Every command that writes an artifact file (`tts save`, `stt transcribe
---output`) follows the same rule: refuse to overwrite an existing file
-unless `--force` is passed (`ErrorCode.OUTPUT_EXISTS`, exit 3), and
-write via a temp file + rename rather than an in-place write, so a
-crash or interrupted process never leaves a half-written file at the
-final path. This applies uniformly now — Phase 7 added the same
-atomic-write + overwrite-protection behavior to `stt transcribe
---output` that `tts save` already had since Phase 2, closing a gap
-where the STT path used a plain `write_text()` call. This describes those CLI
-artifact writes, not an all-files transaction or concurrent-writer lock.
-Sidecar/workflow writers can replace existing metadata, and raw workflow SRT
-helpers rely on caller-managed paths; use a fresh workspace as in the
-[narration sample](../examples/README.md). Do not run concurrent writers
-against the same destination.
+File-producing commands refuse existing regular outputs unless `--force` is
+explicit (`output_exists`, exit 3). Phase 13A extends this to raw SRT helpers,
+artifact sidecars and `WorkflowManifest.write`: Python callers must pass
+`force=True` when replacement is intended. Requested sidecars are preflighted
+before the speech/transcription operation. Symlink, directory and special-file
+destinations are refused even with force (`invalid_argument`, exit 2).
+
+Completed temporary files are atomically linked into absent destinations;
+explicit regular-file replacement uses atomic rename, never truncation or a
+check-then-delete. A concurrent first publisher wins without being clobbered.
+Unsupported hard-link filesystems fail closed; choose a suitable local
+destination. Text files are staged at `0600`; native audio is reserved at
+`0600` in a private `0700` staging directory before AVFoundation opens it.
+The real container extension is retained. Published outputs are `0600`.
+
+These are **individual-file** visibility guarantees, not a transaction across
+all outputs or power-loss durability. Managed pipelines additionally claim
+their basename and track checkpoint inode ownership; raw stage/helper calls
+do not automatically claim a whole workflow. Parent directories must be
+trusted; hostile same-UID directory replacement/in-place mutation is not
+sandboxed. See [workflow output safety](workflow.md#phase-13a-managed-workspace-and-overwrite-rules)
+and the fresh-directory [narration sample](../examples/README.md).
 
 ## Manifests (opt-in, `--manifest`)
 

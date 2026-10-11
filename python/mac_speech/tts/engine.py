@@ -20,12 +20,13 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
 from ..capabilities import find_tts_binary
 from ..errors import ErrorCode, MacSpeechError
-from ..logging_utils import diagnostic
+from ..logging_utils import diagnostic, secondary_diagnostic
 from ..native_protocol import (
     NativeResponse,
     ProtocolVersionError,
@@ -134,40 +135,99 @@ def run_operation(
         timeout=timeout,
     )
 
-    process = subprocess.Popen(
-        command,
-        stdin=subprocess.PIPE if use_stdin else None,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-
     pid_file = _pid_file_path() if track_pid else None
-    if pid_file is not None:
-        _write_pid_file(pid_file, process.pid)
+    process: subprocess.Popen[str] | None = None
+    pid_written = False
 
     # A small grace period beyond the native engine's own --timeout: the
     # native process is expected to time out and exit on its own first;
     # this is a defense-in-depth backstop, not the primary mechanism.
     try:
+        # Acquisition itself is guarded. An interrupt during construction
+        # may create a writer before Python has received its process handle.
+        process = subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE if use_stdin else None,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        if pid_file is not None:
+            _write_pid_file(pid_file, process.pid)
+            pid_written = True
         stdout_data, stderr_data = process.communicate(
             input=text if use_stdin else None, timeout=timeout + 10
         )
     except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait()
-        raise MacSpeechError(
+        confirmed = process is not None and _kill_and_reap(process)
+        failure = MacSpeechError(
             code=ErrorCode.TIMEOUT,
-            message=f"mac-speech-tts did not exit within {timeout + 10:.0f} seconds; it was terminated.",
+            message=(
+                f"mac-speech-tts did not exit within {timeout + 10:.0f} seconds; it was terminated."
+                if confirmed else "Native TTS timed out and child termination could not be confirmed."
+            ),
         )
+        if not confirmed:
+            setattr(failure, "_mac_speech_native_unconfirmed", True)
+        raise failure
+    except BaseException as failure:
+        # SIGINT sent only to Python does not reach the native child. Reap
+        # that writer before the workflow is allowed to release its claim.
+        unconfirmed = process is None or not _kill_and_reap(process)
+        if unconfirmed:
+            setattr(failure, "_mac_speech_native_unconfirmed", True)
+            secondary_diagnostic("Native TTS termination is unconfirmed; any workflow claim must be retained.")
+        if isinstance(failure, (OSError, ValueError)):
+            converted = MacSpeechError(
+                code=ErrorCode.NATIVE_PROCESS_ERROR,
+                message="Native TTS subprocess operation failed.",
+                remedy="Inspect the selected engine and local permissions; an unconfirmed writer must be stopped before reusing its workspace.",
+            )
+            if unconfirmed:
+                setattr(converted, "_mac_speech_native_unconfirmed", True)
+            raise converted from failure
+        raise
     finally:
-        if pid_file is not None:
-            _remove_pid_file(pid_file)
+        original_failure = sys.exc_info()[1]
+        unconfirmed = original_failure is not None and getattr(original_failure, "_mac_speech_native_unconfirmed", False)
+        if pid_file is not None and pid_written and not unconfirmed:
+            try:
+                _remove_pid_file(pid_file)
+            except OSError as cleanup_failure:
+                if original_failure is not None:
+                    secondary_diagnostic("TTS PID cleanup failed; the original operation failure was retained.")
+                else:
+                    raise MacSpeechError(
+                        code=ErrorCode.INTERNAL_ERROR,
+                        message="TTS completed but its PID-file cleanup failed.",
+                    ) from cleanup_failure
 
     for line in (stderr_data or "").splitlines():
         diagnostic(f"[mac-speech-tts] {line}")
 
+    assert process is not None
     return _parse_response(stdout_data, exit_code=process.returncode)
+
+
+def _kill_and_reap(process: subprocess.Popen[str]) -> bool:
+    """Confirm writer termination without replacing an in-flight failure."""
+    try:
+        try:
+            process.kill()
+        except ProcessLookupError:
+            pass  # It may already have exited; wait still reaps it.
+        process.wait(timeout=10)
+        for pipe in (process.stdin, process.stdout, process.stderr):
+            if pipe is not None:
+                try:
+                    pipe.close()
+                except (OSError, ValueError):
+                    pass  # The child is already reaped; preserve the original failure.
+        return True
+    except BaseException:
+        # Includes another interrupt during cleanup. Callers propagate the
+        # original exception and tag it so a workflow does not free its slot.
+        return False
 
 
 def _parse_response(stdout_data: str, *, exit_code: int) -> dict[str, Any]:

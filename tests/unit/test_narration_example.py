@@ -271,7 +271,7 @@ def test_unreadable_text_input_is_actionable_without_logging_content(tmp_path, c
 
 
 def test_manifest_write_failure_returns_nonzero_and_retains_audio(tmp_path, capsys, monkeypatch, synth, align):
-    monkeypatch.setattr(workflow.WorkflowManifest, "write", Mock(side_effect=OSError("private path")))
+    monkeypatch.setattr(workflow.WorkflowManifest, "write_checkpoint", Mock(side_effect=OSError("private path")))
     output = tmp_path / "manifest-error"
     assert example.main(["--text", "Sample.", "--output-dir", str(output)]) == 1
     captured = capsys.readouterr()
@@ -292,3 +292,20 @@ def test_help_lists_offline_quickstart_without_engine_calls(capsys, synth, align
     assert captured.err == ""
     synth.assert_not_called()
     align.assert_not_called()
+
+
+def test_foreign_checkpoint_is_preserved_between_sample_stages(tmp_path, capsys, synth, align):
+    output = tmp_path / "foreign-checkpoint"
+
+    def replace_checkpoint(*args, **kwargs):
+        other = output / "other.json"
+        other.write_text("keep another writer's checkpoint")
+        other.replace(output / "narration.workflow.json")
+        return Transcript(engine="apple", segments=[Segment(text="Words.", start=0, end=1)])
+
+    align.side_effect = replace_checkpoint
+    assert example.main(["--text", "Public sample.", "--output-dir", str(output)]) == 1
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)["error"]["code"] == "manifest_write_failed"
+    assert (output / "narration.workflow.json").read_text() == "keep another writer's checkpoint"
+    assert (output / "narration.wav").exists()

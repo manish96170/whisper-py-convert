@@ -20,14 +20,14 @@ are mocked wrapper tests, not proof of native-engine support on Intel Macs:
   `E4`, `E7`, `E9`, and `F` catch import, syntax, and Pyflakes correctness
   issues across `python/mac_speech`; this is not a formatting migration.
 - **Types:** mypy 1.15.0 on Python 3.11, with Python 3.9 as its target and
-   `strict = true` for the 16 files explicitly listed in `pyproject.toml`.
+   `strict = true` for the 17 files explicitly listed in `pyproject.toml`.
 - **Installed CLI:** `mac-speech version` after the editable installation.
 - **Clean install:** a separate job builds an sdist and a wheel from it,
   installs only that wheel with `--no-index --no-deps` in a fresh venv, and
   runs `scripts/smoke_core.py --require-noneditable` with Python networking
   denied. This job checks engine-free diagnostics/validation, not native TTS.
-- **Phase 12 helper lint:** an explicit isolated correctness-lint command
-  checks the new audit/smoke/narration/lifecycle helpers and tests, outside
+- **Explicit helper/safety lint:** an isolated correctness-lint command
+  checks audit/smoke/narration/lifecycle and file/workflow safety tests, outside
   Ruff's package-only configured include list.
 - **Offline inventory:** the quality job reports the empty base dependency
   surface and unresolved project license. It does not run `--check` or
@@ -54,7 +54,7 @@ sandbox for subprocesses or Apple's services.
 The strict gate checks configuration, error/result models, logging helpers,
 alignment/workflow orchestration, the STT adapter and its models/SRT/WebVTT
 helpers, TTS result models, the native protocol/TTS process wrapper, and the
-exporter interface/local-copy adapter.
+exporter interface/local-copy adapter and atomic file I/O module.
 It checks annotated function bodies, requires complete function annotations,
 checks return types, and rejects unparameterized generics and unused ignores.
 
@@ -152,8 +152,13 @@ toolchain is separate from runtime use of the offline speech core.
 
 ## Verification and limits
 
-The workflow must be present in committed/pushed source before GitHub can
-run it; a commit/push requires explicit maintainer authorization.
+The Phase 12 baseline was explicitly authorized, committed and pushed as
+`cdd74dd`. [Run 38117411339](https://github.com/manish96170/whisper-py-convert/actions/runs/38117411339)
+completed successfully: all six Python versions, quality and clean-wheel
+jobs passed; the manual native job was intentionally skipped. This verifies
+that committed baseline, **not subsequent uncommitted Phase 13A changes**.
+Those changes must be separately authorized/committed/pushed before their
+hosted workflow can run.
 Configuration alone is not evidence that any hosted matrix job or
 self-hosted job has run. Local evidence and the main session's independent
 integration checks should be recorded separately; do not report Python 3.9
@@ -164,8 +169,9 @@ The main session ran the final mocked suite on local Framework interpreters
 pure-Python pytest tooling; they are not clean-venv installation evidence.
 The independent 3.11.3 repository run was 322 passed/4 native STT skips, and
 the clean-wheel/native offline checks used a separate 3.11.3 venv. Local
-3.9/3.10 validation and actual hosted Actions results remain unverified;
-record confirmed run results in the plan/handoff after the requested push.
+3.9/3.10 validation remains unverified locally; the hosted baseline matrix
+does validate those runtimes. Current local Phase 13A results are recorded
+separately in the plan/handoff.
 The current scope does not establish Intel Mac support, the macOS 13 runtime
 floor of native TTS, real cloud-provider uploads, or the existing native STT
 engine's compatibility with older macOS releases.

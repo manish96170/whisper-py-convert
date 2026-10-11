@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -21,6 +20,7 @@ from . import __version__, artifacts, stt, tts
 from .capabilities import detect_capabilities
 from .doctor import run_doctor
 from .errors import ErrorCode, MacSpeechError
+from .file_io import atomic_write_text, check_output_path
 from .logging_utils import diagnostic
 from .native_protocol import PROTOCOL_VERSION
 from .stt import engine as stt_engine
@@ -122,6 +122,11 @@ def _cmd_tts_save(args: argparse.Namespace) -> int:
             code=ErrorCode.INVALID_ARGUMENT,
             message="--output is required for `mac-speech tts save`.",
         )
+    if getattr(args, "manifest", False):
+        requested = Path(args.output)
+        if not requested.suffix:
+            requested = requested.with_suffix(f".{args.format}")
+        check_output_path(artifacts.manifest_path_for(requested), force=args.force)
     result = tts.synthesize_to_file(
         text,
         output_path=args.output,
@@ -141,7 +146,7 @@ def _cmd_tts_save(args: argparse.Namespace) -> int:
             language=result.language,
             input_text=text,
         )
-        manifest_file = artifacts.write_manifest(manifest, Path(result.output_path))
+        manifest_file = artifacts.write_manifest(manifest, Path(result.output_path), force=args.force)
         diagnostic(f"Wrote manifest to {manifest_file}")
     if args.json:
         print(json.dumps(result.to_dict()))
@@ -189,22 +194,14 @@ def _cmd_tts(args: argparse.Namespace) -> int:
 # --- stt subcommands -----------------------------------------------------
 
 def _write_text_atomically(path: Path, content: str, *, force: bool) -> None:
-    if path.exists() and not force:
-        raise MacSpeechError(
-            code=ErrorCode.OUTPUT_EXISTS,
-            message=f"Output file already exists: {path}",
-            remedy="Choose a different --output path, or pass --force to overwrite.",
-        )
-    temp = path.with_name(path.name + f".tmp-{os.getpid()}")
-    temp.write_text(content, encoding="utf-8")
-    temp.replace(path)
+    atomic_write_text(path, content, force=force)
 
 
 def _write_manifest_if_requested(args: argparse.Namespace, output_path: Path, *, engine_name: str) -> None:
     if not getattr(args, "manifest", False):
         return
     manifest = artifacts.build_manifest(output_path, operation="stt_transcribe", engine=engine_name)
-    manifest_file = artifacts.write_manifest(manifest, output_path)
+    manifest_file = artifacts.write_manifest(manifest, output_path, force=args.force)
     diagnostic(f"Wrote manifest to {manifest_file}")
 
 
@@ -214,6 +211,11 @@ def _cmd_stt_transcribe(args: argparse.Namespace) -> int:
             code=ErrorCode.INVALID_ARGUMENT,
             message="--seg-ts and --word-ts require --format srt or --format webvtt.",
         )
+    if args.output:
+        output = Path(args.output)
+        check_output_path(output, force=args.force)
+        if getattr(args, "manifest", False):
+            check_output_path(artifacts.manifest_path_for(output), force=args.force)
 
     if args.output_format == "json":
         transcript = stt.transcribe_json(
@@ -324,9 +326,9 @@ def _cmd_workflow_narrate(args: argparse.Namespace) -> int:
         language=args.language,
         align=not args.no_align,
         force=args.force,
+        persist_manifest=True,
     )
-    manifest_path = Path(args.output_dir) / f"{args.basename}.workflow.json"
-    manifest.write(manifest_path)
+    manifest_path = Path(args.output_dir).expanduser().resolve() / f"{args.basename}.workflow.json"
 
     if args.json:
         print(json.dumps(manifest.to_dict()))
