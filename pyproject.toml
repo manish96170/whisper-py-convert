@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mac-speech"
+version = "0.1.0"
+description = "Shared Python wrapper and CLI for local macOS speech capabilities (STT and TTS)."
+readme = "python/README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/manish96170/whisper-py-convert"
+Issues = "https://github.com/manish96170/whisper-py-convert/issues"
+Documentation = "https://github.com/manish96170/whisper-py-convert/tree/main/docs"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4", "ruff==0.14.14", "mypy==1.15.0"]
+# Google Drive export (PLAN.md Phase 8) — kept out of the base install;
+# S3 export uses the `aws` CLI (no SDK dependency); Slack export shells
+# out to a local team-slack-bridge checkout (no Python dependency).
+gdrive = [
+    "google-api-python-client>=2.0",
+    "google-auth-oauthlib>=1.0",
+    "google-auth-httplib2>=0.1",
+]
+
+[project.scripts]
+mac-speech = "mac_speech.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "python" }
+
+[tool.setuptools.packages.find]
+where = ["python"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/unit"]
+
+[tool.ruff]
+target-version = "py39"
+include = ["python/mac_speech/**/*.py", "pyproject.toml"]
+
+[tool.ruff.lint]
+# Correctness checks, not a formatting migration of the existing code.
+select = ["E4", "E7", "E9", "F"]
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+# Check these modules strictly without dragging untyped CLI/provider code into
+# the gate via imports. See docs/ci.md for the boundary and remaining work.
+follow_imports = "silent"
+files = [
+    "python/mac_speech/native_protocol.py",
+    "python/mac_speech/tts/engine.py",
+    "python/mac_speech/config.py",
+    "python/mac_speech/errors.py",
+    "python/mac_speech/results.py",
+    "python/mac_speech/logging_utils.py",
+    "python/mac_speech/align.py",
+    "python/mac_speech/workflow.py",
+    "python/mac_speech/stt/client.py",
+    "python/mac_speech/stt/engine.py",
+    "python/mac_speech/stt/models.py",
+    "python/mac_speech/stt/srt.py",
+    "python/mac_speech/stt/webvtt.py",
+    "python/mac_speech/tts/models.py",
+    "python/mac_speech/export/base.py",
+    "python/mac_speech/export/local.py",
+]

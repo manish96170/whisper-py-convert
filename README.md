@@ -8,6 +8,45 @@ A standalone command-line wrapper with native and portable local transcription b
 
 It supports audio/video formats including MP3 and MP4.
 
+> **This repository also contains the `mac-speech` toolkit**, locally
+> verified through Phase 12: independent native TTS, a shared STT adapter,
+> artifact/narration workflows, and explicit optional exporters.
+> `whisper-py-convert` remains the preserved, independent transcription CLI;
+> its known Apple locale-reservation limitation is not repaired by the toolkit.
+> See [current architecture](docs/architecture.md), [the Python package](python/README.md),
+> and [the phased plan](PLAN.md).
+
+## Local speech toolkit quickstart
+
+For **TTS only**, build the independent native engine and install the small
+Python wrapper into its own environment (macOS; Swift 6.4+ to build):
+
+```sh
+./install.sh tts
+python3 -m venv .venv
+.venv/bin/python -m pip install .
+.venv/bin/mac-speech capabilities --json
+.venv/bin/mac-speech tts save "Hello from my Mac." --output ./hello.wav --manifest
+```
+
+The base wrapper has **no third-party runtime dependencies**. Speech uses
+locally installed Apple voices/assets; it does not need cloud credentials.
+Installing a new voice/locale or selecting the legacy faster-whisper backend
+can require separate downloads—neither is part of the offline smoke test.
+`tts` mode skips the STT native build, but still installs the existing legacy
+wrapper script; it never removes an existing STT installation.
+
+- [Installation, supported versions, uninstall, and troubleshooting](docs/installation.md)
+- [Packaging, integrity checks, and signing limitations](docs/packaging.md)
+- [Small narration workflow and explicit optional export](examples/README.md)
+- [Clean-install and network-denied verification](docs/verification.md)
+- [CI coverage and toolchain requirements](docs/ci.md)
+- [Dependency/license inventory](docs/sbom.md) and [release checklist](docs/releasing.md)
+
+The toolkit is currently source-distributed for local use. Public wheel/sdist
+or native-binary publication requires resolution of the missing project license;
+no PyPI publication, signed binary release, or notarization is implied.
+
 ## How it works
 
 ```mermaid
@@ -36,8 +75,12 @@ From this directory:
 ```
 
 On macOS 27+, the installer also builds the native Apple Speech backend. On
-other systems it installs the Python wrapper only; faster-whisper is installed
-on first use if needed.
+macOS with a suitable Swift toolchain, its default `all` mode also builds the
+independent TTS engine. On older macOS the STT build may warn/fail while TTS
+can still build; non-macOS systems receive the legacy Python wrapper only.
+Use `./install.sh stt` for only the native STT build. This installer does not
+install the `mac-speech` Python package; faster-whisper is installed by the
+legacy dispatcher on first use if needed.
 
 Then open a new shell, or add `~/.local/bin` to `PATH` as printed by the
 installer. The command can then be run from any directory.
@@ -135,6 +178,10 @@ models for multilingual recordings.
 - Only the selected model is loaded into memory. You can keep both models
   downloaded and switch with `--model`.
 - Progress messages go to stderr, leaving stdout clean for transcript output.
+- The existing Apple STT engine can exhaust its five-locale reservation quota
+  and report `does not support locale`. This remains open as
+  [risk #19](docs/risk-register.md); engine discovery does not prove successful
+  transcription, and four native regression fixtures currently skip for it.
 
 ## Backend comparison
 
@@ -150,9 +197,14 @@ models for multilingual recordings.
 Package.swift                         Swift package for the Apple backend
 Sources/WhisperAppleTranscribe/       Swift SpeechAnalyzer CLI
 windows/                              Optional Windows AI Speech helper
+engines/tts-swift/                     Independent native TTS Swift package
+python/mac_speech/                    Shared Python API and mac-speech CLI
+pyproject.toml, MANIFEST.in            Python-only wheel/sdist packaging
+tests/, scripts/, .github/workflows/   Tests, offline helpers, and CI configuration
+docs/, examples/                      Toolkit contracts and runnable examples
 BROWSER.md                            Deferred browser-local design notes
 whisper-py-convert.py                 Cross-platform Python dispatcher
-install.sh                            Builds and installs the command
+install.sh                            Native stt/tts/all modes and legacy command
 ```
 
 The Python dispatcher is intentionally the stable CLI boundary. Future
@@ -164,8 +216,21 @@ guide.
 ## Prerequisites
 
 - Python 3.9+ for the Python wrapper and faster-whisper backend
-- macOS 27+ and Swift 6/Xcode Command Line Tools for the Apple backend
+- macOS 27+ and Swift 6.4+ with a suitable Apple SDK for the Apple backend
+- Native TTS targets macOS 13+ (Personal Voice APIs macOS 14+), also requiring
+  Swift 6.4+ to build; only macOS 27.0.1 arm64 native execution is verified
 - Windows 11 24H2+, Windows App SDK, supported hardware, and MSIX packaging for
   the Windows native backend; see [windows/README.md](windows/README.md)
 - Network access only when installing packages or downloading first-use model
-  assets; transcription itself is local after the assets are installed
+   assets; transcription itself is local after the assets are installed
+
+## Current verification boundary
+
+Phase 12's independent local checks recorded **322 Python tests passed,
+4 native STT skips** on Python 3.11.3; mocked source tests passed **322 each**
+on 3.12.5/3.13.7/3.14.8. The extracted sdist passed **311 tests, 15 skipped**.
+Package/helper Ruff and 16-file scoped strict mypy passed; isolated Swift
+checks passed **39 tests** and a release build. A clean 3.11.3 wheel and real
+TTS-only install passed network-denied, credential-free smoke and focused
+uninstall/restore checks. These are local results, not a hosted-CI or successful
+native-STT claim. See [verification](docs/verification.md) and [CI scope](docs/ci.md).

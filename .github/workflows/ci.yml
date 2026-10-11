@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      swift_tests:
+        description: Run native TTS checks on a provisioned Swift 6.4 macOS runner (trusted refs only)
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-quality:
+    name: Python lint and scoped strict types
+    runs-on: macos-15-intel
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install development dependencies
+        run: python -m pip install -e '.[dev]'
+      - name: Lint the new Python package
+        run: python -m ruff check python/mac_speech
+      - name: Lint Phase 12 helpers and tests explicitly
+        run: >-
+          python -m ruff check --isolated --select E4,E7,E9,F
+          scripts/audit_dependencies.py scripts/smoke_core.py examples/narration_workflow.py
+          tests/unit/test_dependency_audit.py tests/unit/test_smoke_core.py
+          tests/unit/test_narration_example.py tests/unit/test_installation_lifecycle.py
+      - name: Strict type check (scope in pyproject.toml)
+        run: python -m mypy
+      - name: Offline base dependency and license inventory (not a release gate)
+        run: python scripts/audit_dependencies.py --group runtime
+
+  python-tests:
+    name: Python ${{ matrix.python }} mocked unit tests
+    runs-on: macos-15-intel
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install package and test dependency (no cloud extras)
+        run: python -m pip install -e . 'pytest>=7.4'
+      - name: Check installed CLI
+        run: mac-speech version
+      - name: Run mocked unit tests without native STT regression fixtures
+        run: python -m pytest tests/unit --ignore=tests/unit/test_stt_regression_fixtures.py -q
+
+  clean-wrapper:
+    name: Wheel-from-sdist clean install and offline smoke
+    runs-on: macos-15-intel
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install build tools (not runtime dependencies)
+        run: python -m pip install build 'setuptools>=68' wheel
+      - name: Build sdist and wheel from sdist
+        run: python -m build --outdir "$RUNNER_TEMP/mac-speech-dist"
+      - name: Install only the wheel into a clean environment
+        run: |
+          python -m venv "$RUNNER_TEMP/mac-speech-clean"
+          "$RUNNER_TEMP/mac-speech-clean/bin/python" -m pip install --no-index --no-deps "$RUNNER_TEMP"/mac-speech-dist/*.whl
+          "$RUNNER_TEMP/mac-speech-clean/bin/python" -m pip check
+      - name: Check installed wrapper without Python networking or optional extras
+        run: '"$RUNNER_TEMP/mac-speech-clean/bin/python" scripts/smoke_core.py --require-noneditable'
+
+  swift-tts:
+    name: Native TTS (opt-in Swift 6.4 runner)
+    # No claim that the stock hosted macOS image has this manifest's compiler.
+    # Never schedule PR code on a persistent, potentially credentialed runner.
+    if: github.event_name == 'workflow_dispatch' && inputs.swift_tests
+    runs-on: [self-hosted, macOS, ARM64, swift-6.4]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Gate toolchain and build/test in isolated caches
+        run: bash scripts/ci_swift.sh

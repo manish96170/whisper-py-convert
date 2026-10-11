@@ -1,0 +1,21 @@
+# This is the Python sdist, not the full repository/native-source archive.
+include python/README.md
+include docs/packaging.md
+include docs/sbom.md
+include docs/decisions/ADR-002-packaging-and-distribution.md
+recursive-include tests/unit *.py
+# Standalone Python helpers exercised by the packaged unit tests.
+include examples/narration_workflow.py
+include scripts/smoke_core.py
+include scripts/audit_dependencies.py
+
+# Native engines and the legacy dispatcher are installed from a checkout.
+exclude install.sh whisper-py-convert.py Package.swift
+prune Sources
+prune engines
+prune windows
+prune .build
+prune .venv
+prune build
+prune dist
+global-exclude *.py[cod] .DS_Store

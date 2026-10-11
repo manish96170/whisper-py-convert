@@ -1,5 +1,10 @@
 # Architecture and extension guide
 
+This page documents the preserved **legacy STT dispatcher**. The broader
+`mac-speech` package, independent TTS engine, workflows, packaging, and
+verification boundaries are described in [docs/architecture.md](docs/architecture.md).
+Phase 12 does not replace or modify the legacy STT contract.
+
 ## Runtime flow
 
 ```mermaid
@@ -28,11 +33,13 @@ stdout because users may redirect stdout to a transcript file.
 ## Engine selection
 
 `--engine auto` is the default. It selects Apple when the native executable is
-present, otherwise faster-whisper. Explicit selection is available for testing
+present, then Windows when its helper is installed, otherwise faster-whisper.
+Explicit selection is available for testing
 and reproducibility:
 
 ```sh
 whisper-py-convert --engine apple recording.mp4
+whisper-py-convert --engine windows recording.wav
 whisper-py-convert --engine faster-whisper --model small.en recording.mp4
 ```
 
@@ -66,10 +73,16 @@ sequenceDiagram
 4. Feed the provider sequence into `SpeechAnalyzer`.
 5. Consume finalized `SpeechTranscriber` results and write them to stdout.
 
-The target is macOS 27 because `AssetInputSequenceProvider` and the current
+The root source manifest requires Swift tools **6.4**. The target is macOS 27 because `AssetInputSequenceProvider` and the current
 audio/video sequence path are macOS 27 APIs. The Apple backend is therefore
 optional; the Python/faster-whisper path remains the fallback on older macOS
 versions and other operating systems.
+
+The existing locale reservation is not released by this helper; repeated
+language changes can exhaust Apple's five-locale quota. This remains
+[risk #19](docs/risk-register.md), not a Phase 12 repair. An available binary
+does not guarantee a successful transcription; four real STT fixtures currently
+skip for the documented failure.
 
 The Windows helper is an optional MSIX-packaged C# executable. It uses Windows
 AI Speech batch recognition on supported Windows 11 24H2+ hardware. It
@@ -143,13 +156,19 @@ flowchart LR
     DL --> USE
 ```
 
-`install.sh` copies the Python entrypoint and, on a Mac with Swift, builds and
-copies the Apple executable into:
+`install.sh stt` copies the Python entrypoint and, on a Mac with a compatible
+Swift toolchain/SDK, attempts to build and copy the Apple executable into:
 
 ```text
 ~/.local/share/whisper-py-convert/
 ~/.local/bin/whisper-py-convert -> .../whisper-py-convert.py
 ```
+
+The diagram above describes the STT portion only. The default `all` mode also
+builds TTS independently; `tts` skips the Apple STT build but still copies the
+legacy script/symlink. Python package installation is separate. Paths honor
+the installer's XDG overrides; see [installation](docs/installation.md) for
+discovery limits and build warnings (installer exit 0 alone is not build proof).
 
 The faster-whisper package is pinned to `1.2.1` and is installed lazily. Its
 models are cached by Hugging Face under `~/.cache/huggingface/hub`. An optional
@@ -177,4 +196,9 @@ python3 whisper-py-convert.py --engine apple \
 
 The first Apple run may install speech assets. A second run should not repeat
 the asset-installation message. To test the fallback explicitly, use
-`--engine faster-whisper --model small.en`.
+`--engine faster-whisper --model small.en`; that can install packages/download
+models and is not an offline packaging smoke test. The Apple smoke can fail
+for risk #19; do not treat the check command as successful transcription.
+For Phase 12 wrapper/TTS verification use
+[the clean-install checks](docs/verification.md) and `bash scripts/ci_swift.sh`
+(the latter builds/tests only the independent TTS package).

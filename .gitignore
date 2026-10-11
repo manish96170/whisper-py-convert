@@ -3,3 +3,10 @@ __pycache__/
 .DS_Store
 .venv/
 .build/
+*.egg-info/
+.pytest_cache/
+examples/output/
+.ruff_cache/
+.mypy_cache/
+/build/
+/dist/
