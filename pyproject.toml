@@ -19,6 +19,7 @@ Documentation = "https://github.com/manish96170/whisper-py-convert/tree/main/doc
 
 [project.optional-dependencies]
 dev = ["pytest>=7.4", "ruff==0.14.14", "mypy==1.15.0"]
+tui = ["textual==8.2.8"]  # Optional MIT-licensed frontend; Python >=3.9, not a base dependency.
 # Google Drive export (PLAN.md Phase 8) — kept out of the base install;
 # S3 export uses the `aws` CLI (no SDK dependency); Slack export shells
 # out to a local team-slack-bridge checkout (no Python dependency).
@@ -56,6 +57,7 @@ strict = true
 follow_imports = "silent"
 files = [
     "python/mac_speech/batch.py",
+    "python/mac_speech/tui/backend.py",
     "python/mac_speech/file_io.py",
     "python/mac_speech/native_protocol.py",
     "python/mac_speech/tts/engine.py",

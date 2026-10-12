@@ -26,6 +26,11 @@ upstream releases, **not versions resolved for a mac-speech release**.
   OSI-approved open source and does not relicense third-party components.
   See [licensing](licensing.md) and [ADR-003](decisions/ADR-003-project-license.md).
 - `setuptools` is a **build/development dependency**, not a runtime dependency.
+  The optional `tui` extra adds pinned `textual==8.2.8`, checked from
+  [PyPI metadata](https://pypi.org/pypi/textual/8.2.8/json): Python>=3.9,<4, MIT.
+  Its Rich dependency has separate MIT terms. No UI requirement is in the base
+  runtime; a resolved extra-environment inventory remains distinct from this direct
+  declaration audit. No vulnerability or legal-compatibility clearance is implied.
   An isolated wheel build resolves `[build-system].requires` separately.
   `pip`, `wheel`, `build`, test runners and audit tools used by a release job
   belong in its separately recorded build/tool environment, not in the base

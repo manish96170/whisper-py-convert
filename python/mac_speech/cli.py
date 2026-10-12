@@ -60,6 +60,12 @@ def _cmd_doctor(args: argparse.Namespace) -> int:
     return 0 if report.ok else 1
 
 
+def _cmd_tui(args: argparse.Namespace) -> int:
+    from .tui import launch
+
+    return launch(locale=args.locale, timeout=args.timeout, demo=args.demo)
+
+
 def _resolve_text_argument(args: argparse.Namespace) -> str:
     if args.stdin:
         if args.text is not None:
@@ -572,6 +578,12 @@ def build_parser() -> argparse.ArgumentParser:
         "doctor", parents=[json_flag], help="diagnose missing binaries and unsupported environments"
     )
     doctor_parser.set_defaults(handler=_cmd_doctor)
+
+    tui_parser = subparsers.add_parser("tui", help="optional read-only speech dashboard (requires tui extra)")
+    tui_parser.add_argument("--locale", default="en-US", help="locale for read-only Apple readiness queries")
+    tui_parser.add_argument("--timeout", type=float, default=8.0, help="per-query timeout, 0 < seconds <= 30")
+    tui_parser.add_argument("--demo", action="store_true", help="fictional demonstration data; no native processes")
+    tui_parser.set_defaults(handler=_cmd_tui)
 
     _build_tts_subparser(subparsers)
     _build_stt_subparser(subparsers)

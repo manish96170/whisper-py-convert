@@ -1,6 +1,7 @@
 # Future optional speech workspace TUI — design proposal
 
-**Proposal only, not implemented.** The user requested STT/TTS tabs, monitoring,
+**Phase 1 read-only implementation now approved/in progress.** See [the bounded
+workspace](tui.md); execution/maintenance phases below remain a proposal. The user requested STT/TTS tabs, monitoring,
 job visibility and safe maintenance controls. This does not authorize a daemon,
 new runtime dependency, arbitrary process termination, asset download or eviction.
 Existing command-line/Python APIs remain first-class and independently usable.

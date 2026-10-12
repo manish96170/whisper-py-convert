@@ -47,6 +47,7 @@ wrapper script; it never removes an existing STT installation.
 - [Apple STT reservation repair, one-at-a-time admission and remaining limits](docs/stt-reservation-repair.md)
 - [Safe reservation maintenance previews and native offline validation](docs/stt-reservation-maintenance.md)
 - [Apple language readiness and explicit asset setup before transcription](docs/apple-asset-setup.md)
+- [Optional read-only STT/TTS terminal workspace](docs/tui.md)
 
 The current Apple helper checks language readiness before analysis and does not
 silently download assets during transcription. Missing assets produce an explicit

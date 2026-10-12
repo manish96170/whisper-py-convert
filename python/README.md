@@ -15,6 +15,22 @@ Third-party terms remain separate. No PyPI/native release is claimed here.
 
 ## Installation boundaries
 
+### Optional read-only dashboard
+
+From this reviewed checkout in your selected environment:
+
+```sh
+python -m pip install -e '.[tui]'
+mac-speech tui
+mac-speech tui --demo
+```
+
+The optional pinned Textual frontend adds STT/TTS/Jobs/System & Assets tabs,
+timestamped read-only probes, responsive refresh and safe draining of owned
+diagnostic children. It does not run speech jobs, mutate assets or control external
+processes. Base dependencies stay empty and normal CLI imports do not require
+Textual. See [dashboard instructions](../docs/tui.md) for scope and limitations.
+
 - **Python 3.9+**; no base Python runtime dependencies. A standard wheel or
   Python sdist installs the wrapper, not a native engine or models. Imports,
   help, and diagnostics work without speech engines.

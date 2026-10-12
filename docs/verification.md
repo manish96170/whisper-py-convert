@@ -1,5 +1,51 @@
 # Clean-install and offline core verification
 
+## Optional read-only TUI phase 1 — latest local evidence
+
+User-approved read-only UI starts from clean published `65e0df6`; hosted CI for that
+baseline is separate, and new UI source remains uncommitted. No speech job, asset
+mutation/download, external signalling or native-source edit occurred.
+
+| Check | Actual result |
+| --- | --- |
+| `.venv/bin/python -m pytest tests/unit -q -rs` | **608 passed, 5 skipped**: four native opt-in fixtures and one optional frontend module without extra |
+| Optional Textual environment, same source full suite | **615 passed, 4 native opt-in skips** |
+| Optional backend/headless UI suite | **41 passed** |
+| Package/test Ruff | Passed |
+| Strict mypy | Passed, **19 source files**, new backend included; optional frontend excluded from strict gate |
+| Legacy `py_compile` / protected source comparison / diff check | Passed; Swift/STT/TTS/legacy/Windows/installer match baseline |
+| Real read-only installed STT/TTS dashboard | **4** reservation rows, **182** reported voices; before/after inventory and installed status equal, owned probes zero |
+| Wheel-from-sdist/source comparison | Passed; **33 modules byte-matched**, base runtime empty, Textual8.2.8 conditional on `tui`, UI docs included |
+| Clean base wheel/pip check/socket-denied smoke | Passed, local `--no-index --no-deps`; missing-extra message verified |
+| Installed optional wheel demo/headless smoke | Passed; fictional data only, no native children |
+| Extracted sdist, extracted package explicitly selected | **604 passed, 15 skipped**: 11 repository-only installer checks, four native fixtures |
+
+Independent reviewer reran 41 tests and original high/medium repros. Fixed full-pipe
+overflow and acquisition-cancel cleanup by keeping/establishing discard readers
+before termination; stdout/stderr2MiB/SIGTERM-refusal/repeated-close completed ~2.4s,
+with zero active probes/drainers/requests. Fixed exceptional nested-JSON waves by
+sanitizing errors and joining all siblings before clearing busy. Optional flags are
+typed and control-sanitized. PID-startup fixture and Textual private-name collision
+were corrected. No remaining reported high/medium finding in reviewed phase scope.
+
+Optional dependency metadata was checked from PyPI: Textual8.2.8 declares
+Python>=3.9,<4 and MIT; Rich dependency is separately MIT. Installed UI/test libraries
+only in approved scratch `tui-dev-na4vmu39/venv`. Python3.9 UI runtime, older/other
+terminal platforms, comprehensive system-process monitoring and abrupt-parent-death
+cleanup are **not** established. Native CI/build tests were not rerun because this
+read-only phase does not authorize their synthesis/integration operations.
+
+Evidence under approved temporary root: `tui-readonly-smoke.json` (counts/state,
+no saved real voice names/IDs), fictional `tui-demo.svg`, `tui-package-2xg1m5uh/`
+(build log/archives/extracted/clean env). Archive extraction initially used a tar
+filter unavailable in3.11.3; validated locally produced members/path containment
+before extraction and reran successful checks. Artifacts predate final handoff-only
+updates, not final/authenticated releases. No caches purged or user changes reset.
+
+Read-only launch/limits are documented in [tui.md](tui.md); full execution/mutable
+maintenance UI remains a separately approved later phase. The new optional CI job
+uses only synthetic/headless tests and does not add macOS27 to independent TTS CI.
+
 ## Explicit setup and real ownership evidence — latest local verification
 
 The approved temporary en_CA metadata reacquisition succeeded without an

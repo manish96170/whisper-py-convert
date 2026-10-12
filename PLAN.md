@@ -1,6 +1,6 @@
 # Mac Speech Toolkit --- Phased Product and Engineering Plan
 
-**Status:** Risk #19 locally resolved with owned native evidence; explicit asset setup uncommitted\
+**Status:** Published baseline `65e0df6`; read-only TUI MVP locally verified, uncommitted\
 **Purpose:** A durable implementation plan for GPT, Codex, Claude Code,
 OpenCode, or other local coding agents.\
 **Primary platform:** macOS on Apple Silicon, starting with the user's
@@ -1064,6 +1064,35 @@ documentation accuracy, and look for hidden network/credential
 requirements.
 
 ## Phase 13 --- Hardening and future capabilities
+
+### Phase 13C — optional read-only terminal workspace (approved 2026-10-12)
+
+The user reported installing the updated STT helper with expected capability
+output, then explicitly approved the read-only first TUI phase. Starting Git
+state independently verified clean at `65e0df6ad08fc9b58c5466e707051513d9a3154b`;
+hosted CI `38254436190` succeeded for that baseline, not these new changes.
+
+- [x] STT/TTS/Jobs/System & Assets tabs and read-only refresh/navigation.
+- [x] Optional pinned Textual extra, lazy frontend import, empty base dependencies.
+- [x] Async allowlisted diagnostic subprocesses with bounded output/timeouts and
+  owned acquisition/cancellation/drain, one refresh wave at a time.
+- [x] Timestamped last-success retention, pending/error/unknown states, no fake
+  global job registry or conflation of reservations with active processes.
+- [x] Demo/headless/backend safety tests, normal CLI regression, packaging checks
+  and independent review; record precise real read-only probe coverage.
+
+No transcription, synthesis/playback, installation/download, reservation mutation,
+external signalling, persistent history, daemon, native-source change, TUI job
+execution phase, installed-engine replacement or automatic commit/push is authorized.
+Textual8.2.8 was checked live: MIT and Python>=3.9; only the `tui` extra depends on
+it. Development dependencies live in an isolated approved temporary venv, not the
+user’s existing venv. Native operations remain independently packaged.
+
+The user subsequently explicitly requested committing/pushing this reviewed
+read-only phase on main/no-PR to the existing repository. This source-only
+transaction supersedes the earlier implementation-only no-commit boundary once;
+it does not authorize speech execution, assets/process controls, native replacement,
+public package releases or automatic future commits.
 
 Only begin after the earlier phases deliver a stable, useful toolkit.
 

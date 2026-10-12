@@ -34,6 +34,13 @@ are mocked wrapper tests, not proof of native-engine support on Intel Macs:
   represent a public-release/vulnerability clearance; publication stays gated.
 
 Ruff and mypy are pinned, **development-only** dependencies in `.[dev]`.
+
+The optional read-only dashboard has a separate Python3.11 headless/synthetic-child
+job installing `.[dev,tui]`. Base mocked jobs still install no UI extra and may
+explicitly skip the optional frontend module; standard-library backend tests always
+run. The quality strict scope now includes the backend (19 files), not the optional
+Textual frontend. No native SDK/transcription/catalog/asset call is made in UI tests,
+and independent TTS CI requirements/platform remain unchanged.
 The base package still has **zero runtime dependencies**. Test jobs install
 only the base package and pytest; they do not install Google Drive extras,
 speech models, native engines, AWS tooling, or a Slack bridge. There are no

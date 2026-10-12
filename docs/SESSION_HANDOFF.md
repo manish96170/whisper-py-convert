@@ -1,4 +1,107 @@
-# Session handoff — explicit Apple asset setup and live ownership proof
+# Session handoff — read-only TUI phase 1
+
+**Source transaction approval:** the user subsequently requested "commit and
+push" for the reviewed read-only TUI, retaining main/no-PR on
+`manish96170/whisper-py-convert`. Account/admin access and unchanged remote/local
+baseline `65e0df6` were independently verified at preparation time. Execution
+follows this documentation checkpoint; verify actual Git/remote ref and CI result.
+Only reviewed source/tests/docs/optional CI configuration are included, not temp
+environments/screenshots/binaries/data. No native replacement, speech job, asset
+mutation, mutable TUI phase or future automatic commit is implied.
+
+**2026-10-12: locally verified, uncommitted.** The user reported installing the
+updated helper, then explicitly approved phase 1 of the optional read-only TUI.
+Read PLAN.md and this handoff in full; inspect Git/diff/untracked files and rerun
+checks independently. Starting tree was verified clean at published
+`65e0df6ad08fc9b58c5466e707051513d9a3154b`; CI `38254436190` succeeded for that
+baseline, not these new UI changes. No new commit/push is authorized.
+
+That implementation-only restriction is superseded for this newly approved source
+transaction only. All read-only phase/asset/process boundaries remain unchanged.
+
+## Implemented scope and boundaries
+
+- `mac-speech tui [--locale en-US] [--timeout 8] [--demo]`: optional/lazy frontend,
+  STT/TTS/Jobs/System & Assets tabs, Refresh and Quit only.
+- Optional **Textual8.2.8** extra (live metadata: Python>=3.9,<4, MIT); base runtime
+  dependencies remain empty. UI/test libraries installed only in isolated approved
+  temp venv `tui-dev-na4vmu39/venv`, not the user's existing environment.
+- `tui/backend.py`: stdlib async allowlisted inventory/inspect/voices diagnostics,
+  bounded stdout/stderr retention, timeout/cancellation/acquisition ownership and
+  joined terminate/kill/reap for OWNED read-only probes. No external PID control.
+- Independent section completion within one refresh wave; last successful snapshot
+  retained with timestamp when slow/failed. Unknown external jobs remain unknown;
+  this session starts no speech jobs. Dashboard cumulative CPU/peakRSS are not
+  whole-machine or native-job totals. Plain/control-sanitized native display values.
+- No analysis, playback/synthesis, installation/download, reservation mutation,
+  history export, automatic eviction, job execution, daemon or native-source change.
+  TUI execution/maintenance phases remain separately approved future work.
+
+## Verification
+
+- Baseline default suite **574 passed/four native opt-in skips**.
+- Final existing-venv suite: **608 passed/five skips** (four native fixtures plus
+  one skipped optional headless module without Textual). Optional UI environment:
+  **615 passed/four native skips**. Skips are not execution evidence.
+- Focused optional backend/headless suite: **41 passed**, including real synthetic
+  subprocess backpressure/cancellation/reap cases. Package/test Ruff pass; strict
+  mypy passes **19 source files**, including backend (frontend not added to strict
+  scope). Legacy py_compile passes. No mutating Swift regression tests were run
+  for this read-only phase; all native/legacy/TTS files match baseline.
+- Real local READ-ONLY dashboard: selected installed helper reported **four**
+  reservation rows, TTS reported **182** voices; before/after inventory+installed
+  statuses matched; owned probes ended at zero. Real voice names/identifiers were
+  not persisted. `tui-readonly-smoke.json` records counts/state only; demo-only SVG
+  `tui-demo.svg` contains fictional data, not real voices.
+- Offline wheel-from-sdist built/inspected: all **33 modules byte-matched**, optional
+  Textual requirement conditional, empty base requirements, Python-only boundaries,
+  UI docs included. Clean base wheel (`--no-index --no-deps`) pip check/socket-denied
+  smoke and missing-extra guidance passed; installed optional wheel demo/headless
+  smoke passed. Extracted package selected explicitly: **604 passed/15 skips**
+  (11 repository-only installer checks, four native fixtures).
+
+## Findings and fixes
+
+Initial demo Quit hit a framework-private `_closing` name collision; dashboard
+state now uses its own prefixed names, with clean mount/quit tests. Synthetic PID
+test assumed interpreter startup within200ms; it now checks returned child handles.
+Reviewer found output-overflow readers being cancelled before reaping, then a
+combined acquisition-cancel/full-pipe case lacking readers. Both fixed: drain/discard
+excess data, keep readers through termination, create fallback discard readers when
+normal output setup was bypassed. Deep JSON errors are sanitized; all section tasks
+join before releasing the wave guard. Optional native flags are typed/defensively
+sanitized. Independent closure reran **41 passing tests** and original paused-pipe
+repros: stdout/stderr cancellation+close finished ~2.4s, zero probes/drainers/requests.
+No remaining reported high/medium finding in phase-1 scope. Reviewer did no real
+SDK/catalog calls. Trusted local helpers/uninterruptible OS I/O/abrupt death remain
+limits; this is not a general descendant-process supervisor.
+
+A disposable archive extraction initially used a tar `filter` unsupported by
+Python3.11.3; locally built members were validated as regular/dir and contained
+before extraction, then checks reran. No shared cache was removed or dirty source
+discarded. Artifacts under approved temp `tui-package-2xg1m5uh/` predate final
+handoff-only changes and are not releases.
+
+## Exact changed/new paths
+
+- New `python/mac_speech/tui/{__init__,backend,app}.py`
+- `python/mac_speech/cli.py`, `pyproject.toml`, `MANIFEST.in`, `.github/workflows/ci.yml`
+- New `tests/unit/test_tui_{backend,app}.py`, new `docs/tui.md`
+- `README.md`, `python/README.md`, `PLAN.md`, affected architecture/CI/verification/
+  dependency docs, `docs/tui-proposal.md`, this handoff (inspect actual diff).
+
+## Next three actions
+
+1. Review uncommitted diff and final checks. Launch in a terminal after explicitly
+   installing `.[tui]`; demo is safe on engine-free machines. Details: `docs/tui.md`.
+2. Execute and verify the now-separately-approved source commit/push; hosted CI
+   is separate from local read-only/native observations. Do not replace native engines.
+3. Choose a bounded future owned-job/event phase separately. Do not add mutable
+   asset/process controls or claim global job ownership without the reviewed protocol.
+
+---
+
+# Historical handoff — explicit Apple asset setup and live ownership proof
 
 **Source transaction checkpoint:** the user has now separately requested
 "commit and push" for this reviewed follow-up, retaining the main/no-PR workflow

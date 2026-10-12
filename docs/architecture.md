@@ -50,6 +50,13 @@ cleanup is **fully awaited** with readback while the gate stays held. Public
 regional choices remain intact; see [maintenance safety](stt-reservation-maintenance.md).
 Neural-engine installation and real remote export validation remain deferred.
 
+The newly approved optional [read-only TUI](tui.md) is a Python frontend only.
+Its bounded async executor allowlists native inventory/inspect/voices diagnostics;
+no transcript/control/download/eviction path is exposed. Independent sections retain
+timestamped last-success data without freezing navigation; jobs are session-scope
+zero/unknown external, not a fictional global registry. Textual remains an optional
+extra; native targets, transcript protocol and base runtime dependencies are unchanged.
+
 ## Historical Phase 0 discovery (2026-10-09)
 
 The numbered sections below preserve the facts and experiments recorded **at

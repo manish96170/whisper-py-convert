@@ -93,6 +93,7 @@ jobs:
         run: '"$RUNNER_TEMP/mac-speech-clean/bin/python" scripts/smoke_core.py --require-noneditable'
 
   swift-tts:
+    # Native TTS remains independent of the optional Python TUI job below.
     name: Native TTS (opt-in Swift 6.4 runner)
     # No claim that the stock hosted macOS image has this manifest's compiler.
     # Never schedule PR code on a persistent, potentially credentialed runner.
@@ -105,3 +106,19 @@ jobs:
           persist-credentials: false
       - name: Gate toolchain and build/test in isolated caches
         run: bash scripts/ci_swift.sh
+
+  tui-tests:
+    name: Optional read-only TUI headless tests
+    runs-on: macos-15-intel
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install optional UI and development tools (no speech extras)
+        run: python -m pip install -e '.[dev,tui]'
+      - name: Read-only backend and headless UI tests with synthetic data only
+        run: python -m pytest tests/unit/test_tui_backend.py tests/unit/test_tui_app.py -q
