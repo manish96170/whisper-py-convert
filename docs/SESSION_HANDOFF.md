@@ -1,4 +1,157 @@
-# Session handoff — Phase 13B bounded batch synthesis
+# Session handoff — Apple STT risk #19 maintenance
+
+**Current checkpoint: 2026-10-12. Partial; combined commit/push now authorized.** Read `PLAN.md`
+and this file in full, then inspect Git/diff and rerun checks independently.
+The previous Phase 13B handoff is retained verbatim below as historical evidence,
+not active authorization. Current baseline was independently verified clean on
+`main` at `ad414abf9dce8b0055aa8a1810355aacb2e1bc0c`.
+
+**Latest user decision:** commit and push all reviewed repository source/docs/tests,
+including licensing prepared by the other session, to
+`manish96170/whisper-py-convert` on **main, no PR**. GitHub authentication/access
+was independently verified as `manish96170`; origin/main still matched the stated
+baseline at preparation time. This is a pre-commit checkpoint; transaction execution
+follows it. Verify actual Git/local/remote state, not an inferred commit hash.
+Generated/private artifacts, reservation recovery, new queue services, package
+releases and future automatic commits remain excluded.
+
+## Current scope and design
+
+The user separately authorized narrow STT reservation maintenance. Both original
+defects are repaired: `reserve == false` reuses, never means unsupported; actual
+newly-owned reservations are released after awaited lifetime cleanup. Supported
+equivalent locale is resolved using Apple's API; named Speech error codes classify
+unsupported/capacity failures and preserve framework domain/code. One cooperating
+per-user flock serializes all locales through analysis, output and cleanup. No
+app-global reference-counting assumptions or automatic stale eviction.
+
+Analyzer/results failures stop and drain owned work before reservation release.
+SIGINT/SIGTERM request cooperative cancellation, with awaited stop/cleanup before
+exit; stdout/diagnostics use bounded nonblocking writes. Abrupt death and non-cooperating old
+clients cannot be covered. Existing transcript/CLI/timestamp contracts, legacy
+Python file, Windows, native TTS and installation/dependency boundaries are preserved.
+
+## Current evidence and blocker
+
+Baseline Python: **431 passed, four skips**, all hiding the incorrect unsupported
+message. New explicit opt-in/installed-asset fixtures no longer catch this as skip.
+Real fixtures: **4 passed** (text, JSON, segment SRT, word SRT). Seven separately
+synthesized en-US recordings passed; switching among en-AU/en-CA/en-GB/en-IN/en-US
+passed. Invalid media failed after reservation reuse with provider error
+`AVFoundationErrorDomain/-11800`. Same executable's inventory remained unchanged
+after every run. No new assets downloaded.
+
+Read-only inventory **before native testing**: available/installed en-US,
+`en_AU,en_CA,en_GB,en_IN,en_US`, capacity **5**. This is a device-specific asset
+reservation capacity, not a request quota. The compiled executable remains
+`whisper-py-convert-apple`, linker/ad-hoc signed; no rename/re-sign evasion.
+No existing entries were released. These native runs exercise **borrowed**
+reservations. Real true-acquisition/owned release after success/failure remains
+blocked by the full inventory and needs a free slot or separately authorized
+targeted recovery. Do not mark risk #19 resolved based only on mocks/reuse.
+
+Quality gates: **480 Python passed/four explicit opt-in skips**, or **484 passed/
+zero skips with native opt-in** at the STT-only snapshot; latest combined checkout
+has **487 passed/zero skips**, including three separately added licensing tests.
+The latest default (native opt-in unset) suite is **483 passed/four opt-in skips**.
+**26 root Swift tests/release STT build passed**, **48 independent TTS tests/release
+build passed**, Ruff/mypy (18-file scope)/legacy py_compile passed. Signal/output checks include borrowed-state
+SIGINT/SIGTERM, closed stdout, **stalled unread stdout** (65,536 buffered bytes,
+exit130 without draining), and broken stderr (exit1, no abort). Full unread stderr
+also uses bounded best-effort diagnostic writes, dropping bytes on backpressure.
+Cancellation may leave partial stdout bytes; consumers must check exit status.
+
+Final quality/test counts, signal/output checks and reviewer findings are updated
+in `docs/verification.md`; detailed API/design/state evidence is in
+`docs/stt-reservation-repair.md`. Scratch artifacts live beneath the approved
+temporary `opencode` root (not Git/public releases): `stt-risk19-release`,
+`stt-risk19-debug-retry`, `stt-risk19-real-5n3fbvkf`, and `stt-risk19-*.log`.
+The initial XCTest attempt was blocked by CLT's missing XCTest; tests use Swift
+Testing. A later known TestingMacros failure used an explicit installed-plugin
+retry with isolated caches. An initial gate race (Foundation post-create directory
+permissions) was fixed with atomic `mkdir(0700)` and rechecked. No shared caches
+were removed. The first TTS helper attempt hit its execution timeout; the complete
+longer-timeout run passed **48 tests and release build**.
+
+## Exact current changed paths
+
+Independent review identified broken/stalled diagnostic writes, blocked-stdout
+cancellation, the final-check/analyzer-stop join race, and unexpected automatic
+installation reservations. Fixes use bounded nonblocking diagnostics/output,
+synchronized stop admission with joining on both outcomes, and a post-body
+inventory check that reports/retains ambiguous extras while releasing only
+known ownership. Tests exercise each case, including a delayed stop and full
+open stderr. The final reviewer recheck is recorded in `docs/verification.md`;
+none of this establishes live newly-owned cleanup with the full inventory.
+Reviewer closure independently reran **26 mocked Swift tests, all passed**, with
+byte-matched source/tests and no remaining medium/high findings in reviewed scope.
+Its full-open-unread stderr help repro passed four times without draining the
+pipe. A stale full-flags assertion was corrected to compare configurable
+`O_NONBLOCK`; both main and reviewer reran the green suite. Closure evidence:
+`risk19-rereview-6be30hbf/closure-test.log` under the approved temporary root.
+
+- `Sources/WhisperAppleTranscribe/main.swift`
+- New `Sources/WhisperAppleTranscribe/{Reservation,ReservationGate,AppleInventory,AnalyzerStop,GracefulSignals,Output}.swift`
+- `Package.swift` (add isolated root STT test target, preserve platform/product)
+- New `tests/WhisperAppleTranscribeTests/{ReservationTests,AnalysisLifecycleTests}.swift`
+- `python/mac_speech/stt/engine.py`
+- `tests/unit/test_stt_engine.py`, `tests/unit/test_stt_regression_fixtures.py`
+- New `tests/unit/test_stt_regression_prerequisites.py`
+- `ARCHITECTURE.md`, `PLAN.md`, `docs/{architecture,installation,platform-support,risk-register,verification,SESSION_HANDOFF}.md`
+- New `docs/stt-reservation-repair.md`
+
+No commit/push occurred during implementation; the user has now separately
+authorized the combined source transaction above. Installed binaries were not overwritten;
+use the scratch release binary or rebuild before testing this code. New fixture
+override `MAC_SPEECH_TEST_APPLE_BINARY` uses an unchanged scratch legacy-script
+copy with a sibling symlink, so text/SRT and direct JSON select the same binary.
+
+**Concurrent user/session work discovered during final verification:** `LICENSE`,
+`docs/licensing.md`, `MANIFEST.in`, `pyproject.toml`, `README.md`, `python/README.md`
+have new licensing/metadata edits, outside STT repair ownership. They were left
+untouched, not discarded. Consult current licensing docs rather than historical
+missing-license assertions. At the initial STT-only checkpoint those packaging
+changes had not yet been validated by the main session.
+The subsequent combined pre-commit review **did** validate their license metadata,
+text inclusion and disposable wheel-from-sdist build/install. It passed **472
+tests/15 expected skips** in the extracted sdist, exact license inclusion and
+30-module byte comparison, offline inventory, clean wheel/pip check and engine-free
+socket-denied smoke. This is engineering evidence, not legal or release clearance.
+The combined reviewer approved the final doc/CI-example corrections with no new
+blocking issue and byte-matched 64 runtime/test/license/packaging files against
+its tested snapshot. Its retained `combined-precommit-package-__64sgsn/` evidence
+under the approved temporary root predates doc-only corrections, not a final release.
+Later external changes include licensing-related documentation and
+`tests/unit/test_project_license.py`; inspect the full dirty tree and preserve
+that session's work rather than treating every current diff as STT-owned.
+
+## Next three actions
+
+1. Commit/push the now-authorized complete reviewed tree on main, excluding
+   generated/private state; verify remote commit and hosted CI separately.
+2. Ask the user whether to authorize a narrowly selected, confirmed-unused
+   reservation release **in this executable's identity under the gate**, then
+   test real new ownership/success/failure cleanup without downloading assets.
+   Do not implement destructive recovery or purge state without approval.
+3. Rebuild/install native STT from reviewed source when requested. A source push
+   does not update installed binaries, publish packages, authorize new queues,
+   or establish older/native platform coverage. TTS/unrelated phases remain outside
+   the maintenance implementation scope.
+
+Fresh pre-commit verification again passed **483 Python/four opt-in skips** or
+**487 Python/zero skips with Apple opt-in**, **26 Swift STT tests/release build**,
+Ruff/scoped mypy/legacy py_compile. **Six simultaneous direct calls** all succeeded
+in 2.651 s with borrowed inventory unchanged; the existing gate admits one active
+STT operation at a time, not five active operations. Main's separate TTS helper
+is recorded in `docs/verification.md`. No source/runtime repair expansion was
+needed; active license/authorization docs and setuptools77+ build examples were
+reconciled before staging. This combined transaction additionally includes the
+licensing paths listed above and related docs/tests, plus the minimal CI build-tool
+example update in `.github/workflows/ci.yml`.
+
+---
+
+# Historical session handoff — Phase 13B bounded batch synthesis
 
 **Written:** 2026-10-11. Read `PLAN.md` and this file in full; inspect actual
 Git status/diff and independently rerun checks before trusting the summary.

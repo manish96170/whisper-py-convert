@@ -5,11 +5,13 @@ engines. It lives alongside, not in place of, the preserved
 `whisper-py-convert` STT command. Python owns typed results, diagnostics,
 artifact/workflow metadata, and explicit exports; native engines own speech.
 
-**License status:** no authoritative project license has been established
-in this repository. Public packaged redistribution/publication is blocked until the
-rights holder supplies an authorized license and matching metadata. Do not
-assume a license from public source availability or dependency licenses.
-No PyPI package or prebuilt native release is claimed here.
+**License:** custom proprietary **personal-use, non-commercial,
+no-derivatives**, as selected by the maintainer. This is source-available,
+not OSI-approved open source. Read [LICENSE](../LICENSE) and
+[licensing guidance](../docs/licensing.md): unchanged-source compilation for
+permitted local use is allowed; modification, commercial use and licensee
+redistribution require separate written permission, subject to applicable law.
+Third-party terms remain separate. No PyPI/native release is claimed here.
 
 ## Installation boundaries
 

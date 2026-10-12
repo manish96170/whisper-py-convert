@@ -55,8 +55,9 @@ YOUR_VENV/bin/python -m pip install '.[gdrive]'
 ```
 
 From a reviewed local checkout; for a locally built wheel, install that wheel
-with its `gdrive` extra instead. No public PyPI package is claimed while the
-project license is unresolved.
+with its `gdrive` extra instead. No public PyPI package is claimed; the
+selected custom project license restricts software use to personal,
+non-commercial purposes. Third-party Google dependency terms remain separate.
 
 OAuth scope: `drive.file` only — per-file access for files created by or
 explicitly authorized to the app, not unrestricted whole-Drive access. This

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,6 +9,8 @@ description = "Shared Python wrapper and CLI for local macOS speech capabilities
 readme = "python/README.md"
 requires-python = ">=3.9"
 dependencies = []
+license = "LicenseRef-Mac-Speech-Personal-NonCommercial-NoDerivatives"
+license-files = ["LICENSE"]
 
 [project.urls]
 Repository = "https://github.com/manish96170/whisper-py-convert"

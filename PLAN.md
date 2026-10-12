@@ -1,6 +1,6 @@
 # Mac Speech Toolkit --- Phased Product and Engineering Plan
 
-**Status:** Phase 13A committed/CI-verified; Phase 13B batch synthesis locally complete\
+**Status:** STT risk #19 partially verified; combined source/licensing commit and push authorized\
 **Purpose:** A durable implementation plan for GPT, Codex, Claude Code,
 OpenCode, or other local coding agents.\
 **Primary platform:** macOS on Apple Silicon, starting with the user's
@@ -18,7 +18,8 @@ deferred and native STT risk #19 remains open. The user has now authorized
 Phase 13; the bounded Phase 13A output-safety slice below is locally complete.
 The broader optional Phase 13 backlog remains deferred, not completed. The
 user authorized the 13A source push, then continuation to the bounded batch
-synthesis slice in 13B, now locally complete. Packaged release remains license-blocked.
+synthesis slice in 13B, now locally complete. The 13B checkpoint was license-blocked;
+current licensing is separate concurrent work in `LICENSE`/`docs/licensing.md`.
 
 ------------------------------------------------------------------------
 
@@ -1240,6 +1241,40 @@ destabilize the core speech interfaces.
 
 # 8. Testing strategy
 
+## Authorized maintenance — Apple STT risk #19 (2026-10-12)
+
+This is explicit authorization to narrowly repair the formerly protected
+`Sources/WhisperAppleTranscribe/` reservation handling, not rewrite STT or
+continue unrelated Phase 13 features. Clean baseline independently verified:
+`main`, `ad414abf9dce8b0055aa8a1810355aacb2e1bc0c`.
+
+- [x] Independently reproduce both source defects and baseline **431 passed,
+  four native skips**; verify current Apple SDK/docs (false means already reserved;
+  capacity is device/storage-dependent, not universally five).
+- [x] Resolve supported equivalent locale; classify named Speech domain/codes;
+  serialize cooperating native invocations through complete analysis/output and
+  awaited cleanup; release actual uniquely-owned asset locale only.
+- [x] Focused mock tests for ownership/variants, capacity, false reuse, primary
+  errors, cancellation and analyzer/result teardown; native platform/name/contracts
+  and independent TTS remain unchanged.
+- [x] Replace unsupported catch-and-skip with explicit Apple/installed-assets
+  preflight and opt-in; provisioned regressions fail.
+- [x] Real seven-recording en-US repetition, installed regional switching,
+  borrowed-state invalid-media failure and text/JSON/segment+word SRT evidence.
+- [ ] Real **newly-owned** reservation release after success/post-acquisition
+  failure and any targeted existing-state recovery. Full same-executable inventory
+  (five existing reservations, capacity five) blocks this without separately
+  approved targeted release. Do not remove unrelated reservations/assets.
+- [x] Complete final independent review/rechecks and record exact verification.
+
+Status remains **partial**, not resolved on mocks/reuse alone. Details and exact
+command evidence: `docs/stt-reservation-repair.md`, `docs/verification.md`, current
+handoff. Historical per-phase snapshots remain untouched. Implementation did
+not include a commit/push, download, global reset or signing change. The user
+subsequently explicitly authorized the **combined reviewed source/licensing
+commit and push on main, no PR**. This transaction does not authorize reservation
+eviction/recovery, a new queue service, package release or future automatic commits.
+
 ## 8.1 Unit tests
 
 -   Input validation, configuration precedence, serialization, error
@@ -1394,8 +1429,9 @@ The initial product is considered successful when:
 -   [x] A lightweight Python wrapper and CLI provide a stable,
     documented interface.
 -   [ ] Existing STT continues working with no regression.
-    Adapter compatibility is tested; a full current native STT pass remains
-    blocked by the pre-existing reservation defect (risk #19/four skips).
+    Real borrowed-reservation text/JSON/SRT and concurrent calls now pass;
+    newly-owned native release validation remains blocked by full inventory
+    (risk #19). Default-suite native skips are explicit opt-in prerequisites.
 -   [x] STT and TTS can be installed and used independently.
 -   [x] Available voices and capabilities are discovered rather than
     assumed.
@@ -1425,21 +1461,24 @@ The initial product is considered successful when:
 
 Checked criteria refer to the documented local scope, not public-release
 readiness, live remote exports, hosted-CI results, or untested OS/architecture
-combinations. The missing project license still blocks public packaged release.
+combinations. ADR-003 records the selected custom proprietary license; its
+metadata/text inclusion is verified. Legal/third-party review and explicit
+package publication remain separate gates, not consequences of a source push.
 
 ------------------------------------------------------------------------
 
 # 11. Immediate next actions
 
-1. Review Phase 13A's uncommitted diff and rerun checks, rebuild/install TTS
-   from matching source, then try the TTS-only workflow in
-   `docs/phase13-hardening.md`. A Python wheel cannot upgrade an old engine.
-2. Explicitly authorize any next commit/push if desired. The earlier source
-   transaction completed at `cdd74dd` with successful hosted CI; it is not
-   blanket permission to commit/push these new changes.
-3. Resolve the project license before public packaged release. Separately
-   authorize the preserved STT locale-reservation repair if full STT use is
-   needed; choose a concrete next Phase 13 capability only when justified.
+1. Review the authorized risk #19 repair diff/evidence and rerun checks. Rebuild
+   the Apple helper from matching source; a Python wheel cannot update native code.
+2. Decide whether to authorize a **targeted, confirmed-unused** reservation
+   recovery in this executable's identity to unblock real newly-owned cleanup
+   testing. No release-all, asset deletion, separate-probe reset or quota evasion.
+3. Execute the newly authorized combined source/licensing commit and push on
+   `main` without a PR, excluding generated/private artifacts, then verify the
+   actual remote ref and CI outcome. The combined reviewer verified local
+   packaging/license inclusion, not a public package release. Unrelated future
+   capabilities and earlier Phase 6/9 deferred validations remain out of scope.
 
 The standing prohibition on automatic Git commits remains: authorization
 for the current requested commit/push transaction is not future permission

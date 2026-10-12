@@ -1,8 +1,10 @@
 # Toolkit architecture and Phase 0 discovery
 
-**Current status:** Phase 12 is integrated and locally verified (2026-10-11).
-Public packaged release remains blocked on the authorized project license;
-hosted-CI results are not established. Phase 13 has not begun.
+**Current status:** Phase 13B source is committed at the verified `ad414ab`
+baseline; authorized STT risk #19 maintenance is partially verified (2026-10-12).
+Publication remains outside this task; separately added [licensing guidance](licensing.md)
+supersedes historical missing-license statements. Hosted Python CI does not
+establish native macOS 27 STT coverage.
 
 ## Current repository boundaries
 
@@ -27,8 +29,14 @@ hosted-CI results are not established. Phase 13 has not begun.
   provisioned Swift 6.4 macOS runner. Local evidence and limits are in
   [verification](verification.md), [CI](ci.md), and [platform support](platform-support.md).
 
-The Apple STT locale-reservation defect remains open ([risk #19](risk-register.md));
-native transcription success is not inferred from diagnostics or skipped tests.
+Apple STT [risk #19](risk-register.md) is **partially repaired** in separately
+authorized maintenance (2026-10-12). The helper resolves a supported equivalent,
+serializes cooperating per-user invocations through awaited cleanup, borrows
+pre-existing reservations and releases only its uniquely identified new asset
+locale. The native transcript contract and independent TTS package are unchanged.
+Read-only `--inventory-status` reports this executable's reservation state;
+neither it nor the repair resets old state. See [repair evidence](stt-reservation-repair.md).
+Native success is never inferred from diagnostics or skipped tests.
 Neural-engine installation and real remote export validation remain deferred.
 
 ## Historical Phase 0 discovery (2026-10-09)

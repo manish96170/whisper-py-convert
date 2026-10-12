@@ -44,10 +44,13 @@ wrapper script; it never removes an existing STT installation.
 - [Dependency/license inventory](docs/sbom.md) and [release checklist](docs/releasing.md)
 - [Phase 13A workspace/output safety and upgrade instructions](docs/phase13-hardening.md)
 - [Phase 13B bounded local scene batches](docs/batch-synthesis.md)
+- [Apple STT reservation repair, one-at-a-time admission and remaining limits](docs/stt-reservation-repair.md)
 
-The toolkit is currently source-distributed for local use. Public wheel/sdist
-or native-binary publication requires resolution of the missing project license;
-no PyPI publication, signed binary release, or notarization is implied.
+The toolkit is **source-available under a custom proprietary personal-use,
+non-commercial, no-derivatives license**, not OSI-approved open source.
+See [LICENSE](LICENSE) and [licensing guidance](docs/licensing.md) for the
+grant, restrictions, unchanged-source build allowance and separate third-party
+terms. No PyPI publication, signed binary release, or notarization is implied.
 
 ## How it works
 

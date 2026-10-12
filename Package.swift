@@ -9,6 +9,8 @@ let package = Package(
         .executable(name: "whisper-py-convert-apple", targets: ["WhisperAppleTranscribe"])
     ],
     targets: [
-        .executableTarget(name: "WhisperAppleTranscribe")
+        .executableTarget(name: "WhisperAppleTranscribe"),
+        .testTarget(name: "WhisperAppleTranscribeTests", dependencies: ["WhisperAppleTranscribe"],
+                    path: "tests/WhisperAppleTranscribeTests")
     ]
 )

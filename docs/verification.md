@@ -14,7 +14,7 @@ From the repository root, after installing the development/build tools:
 ```sh
 python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[dev]'
-.venv/bin/python -m pip install build 'setuptools>=68' wheel
+.venv/bin/python -m pip install build 'setuptools>=77' wheel
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/mac-speech-verification.XXXXXX")
 .venv/bin/python -m build --outdir "$WORK/dist"
 python3 -m venv "$WORK/clean"
@@ -35,9 +35,151 @@ generated audio, models, credentials, or accidental development files.
 `doctor` can return 1 for absent STT while the smoke test passes. This is
 expected for a TTS-only/engine-free environment; its JSON and exit status
 must agree. STT smoke coverage exercises native availability/missing-input
-validation before a native process runs, **not successful real transcription**. The existing Apple
-locale-reservation defect is out of Phase 12 scope; unit tests mock native
-output, and the four real STT fixtures can skip for that environmental error.
+validation before a native process runs, **not successful real transcription**.
+The reservation repair was outside historical Phase 12 scope. Current real
+fixtures require explicit native opt-in and installed-asset preflight; they no
+longer skip a provisioned transcription error. See the risk #19 evidence below.
+
+## Apple STT risk #19 maintenance — 2026-10-12
+
+**Partial, not fully resolved:** both source defects are repaired and real
+reservation reuse works; existing full inventory blocks real newly-owned release
+testing without separately authorized targeted recovery. Full design/API evidence:
+[stt-reservation-repair.md](stt-reservation-repair.md).
+
+| Command/check | Actual local outcome |
+| --- | --- |
+| Baseline `.venv/bin/python -m pytest tests/unit -q -rs` | **431 passed, 4 skipped**, all four from the incorrect unsupported-locale catch; not native passes |
+| Repaired repository suite with native opt-in unset | STT-only snapshot: **480 passed, 4 explicit opt-in skips**; latest combined checkout: **483 passed, 4 skips** (8.98 s), including three external licensing tests; no generic locale-flakiness skip |
+| Same suite with `MAC_SPEECH_TEST_APPLE_STT=1 MAC_SPEECH_TEST_APPLE_BINARY=<scratch release binary>` | STT-only snapshot: **484 passed, 0 skipped**; latest combined checkout: **487 passed, 0 skipped** (14.78 s), including three separately added licensing tests; four real fixtures explicitly use Apple |
+| Opted-in `pytest tests/unit/test_stt_regression_fixtures.py -q -rs` | **4 passed**; text, JSON, segment SRT and word SRT |
+| `.venv/bin/python -m ruff check python/mac_speech` and scoped affected-test Ruff | Passed |
+| `.venv/bin/python -m mypy` | Passed, **18 source files** (existing scope) |
+| `swift build --configuration release` with isolated scratch/cache/manifest-cache none | Passed; Swift 6.4/macOS 27.0.1 arm64; existing CLT linker-path warnings |
+| `swift test` with isolated scratch/cache | **26 tests passed**, two suites; reservation ownership/error/cancellation, analyzer/results lifetime seam, delayed-stop race, installation mutation/error classification and stalled-output/broken/full-diagnostic cleanup |
+| `RUNNER_TEMP=<approved temporary root> bash scripts/ci_swift.sh` | **48 TTS tests passed**, release build passed; independent package unchanged |
+| `python3 -m py_compile whisper-py-convert.py` | Passed; legacy file unchanged |
+
+Root test attempts first encountered CLT's absent XCTest, then the known
+TestingMacros plugin issue. Tests use Swift Testing; a private-cache retry
+explicitly loads the installed toolchain plugin with
+`-Xswiftc -load-plugin-library -Xswiftc <selected-toolchain>/lib/swift/host/plugins/testing/libTestingMacros.dylib`.
+One real concurrent gate test caught transient directory permissions from
+Foundation creation; atomic `mkdir(0700)` fixed it and final tests pass.
+The first TTS helper attempt timed out at 120 s; the longer-timeout complete
+helper passed. No shared/global caches were deleted, and failures are not counted
+as passing test runs.
+A diagnostic flags assertion initially compared all flags from before pipe
+filling; Darwin reports an additional internal bit after writing. It now checks
+restoration of the configurable `O_NONBLOCK` bit at the diagnostic boundary.
+
+Native scratch executable checks (same binary for before/after inventory):
+
+- **Seven separate** synthetic en-US recordings: valid nonempty word JSON with
+  expected words, all passed; more than five recordings are not a quota breach.
+- Sequential text switching among installed en-AU, en-CA, en-GB, en-IN, en-US:
+  **five passed**, no download, unchanged reservations after every call.
+- Invalid media: expected provider failure `AVFoundationErrorDomain/-11800`,
+  primary error retained, unchanged borrowed inventory.
+- Two concurrent same-locale processes: **both passed** under cooperating gate.
+- Closed stdout consumer: exit **1**, `[output_failed]` rather than SIGPIPE
+  termination; unchanged reservations. Initial throwing-write evidence used
+  `NSCocoaErrorDomain/512`; final nonblocking writer reports `NSPOSIXErrorDomain/32`.
+- Stalled stdout with **65,536 bytes** buffered and reader kept open/unread:
+  SIGTERM exited **130** before draining the pipe; unchanged borrowed inventory.
+  Cancellation can leave partial stdout bytes; consumers must check exit status.
+- Closed stderr during invalid-media failure: exit **1**, no SIGABRT, unchanged
+  borrowed inventory. Owned mock cleanup also survives a broken diagnostic pipe.
+- SIGINT while gate waiting and SIGTERM during long synthetic native media:
+  both exit **130**, no partial successful output, unchanged reservations.
+- Unsupported read-only locale diagnostic contains `supported_locale: null`,
+  `installed: false`, rather than malformed/missing-field JSON.
+
+Read-only inventory was already full at **5/5**, with
+`en_AU,en_CA,en_GB,en_IN,en_US`. All these real lifetime checks reuse **borrowed**
+entries, which are deliberately not released. Newly-owned acquisition/release
+after success/failure is mock-verified only and remains a native validation gate.
+No old reservations were evicted. A separately compiled probe cannot be assumed
+to recover the executable's identity. SIGKILL/power loss (and existing wrapper
+kill-on-timeout behavior) bypass cooperative native cleanup. No recovery,
+download, binary rename/re-sign, commit/push or unrelated TTS implementation ran.
+
+Evidence under the approved temporary `opencode` root:
+`stt-risk19-build-final.log`, `stt-risk19-test-final.log`,
+`stt-risk19-tts-final.log`, `stt-risk19-real-5n3fbvkf/{before,after,results}.json`,
+and `stt-risk19-signals-gkdr3snh/{results,review-fixes}.json`. OS-cleanable scratch files are
+not Git artifacts/public-release evidence. Hosted Python CI does not establish
+macOS 27 native STT coverage, and TTS CI does not inherit the STT platform floor.
+
+Concurrent licensing work appeared during final inspection in `LICENSE`,
+`docs/licensing.md`, `MANIFEST.in`, `pyproject.toml`, `README.md` and
+`python/README.md`. These are not STT repair changes; they were preserved, not
+reverted or included in this task's packaging/release validation. Consult their
+current terms separately from historical missing-license snapshots below.
+Later concurrent licensing edits include related docs and
+`tests/unit/test_project_license.py` (three tests); these explain the combined
+suite count increase and are not owned by this repair.
+
+Independent review found unsafe broken-stderr writes, uncancellable blocked
+stdout, a stop-task completion-boundary join race, and a silent installation
+reservation-mutation gap. Rechecks confirmed their fixes. A further full-but-open
+stderr repro prompted one bounded nonblocking diagnostic/help write (drop bytes
+on backpressure), rather than a potentially blocking throwing write. Tests cover
+delayed stop joining, stalled stdout owned cleanup and broken/full diagnostic
+preservation. Live installation/newly-owned release remain blocked, not inferred
+from these mocked fixes.
+Final independent review rebuilt the snapshot, repeated its full-unread-stderr
+`--help` probe **four times** (all exit0 without draining), and found no remaining
+medium/high runtime issue in output/analyzer-stop cleanup. Its snapshot's stale
+flag assertion was corrected as described above; main reran the final suite.
+The reviewer then independently reran the complete corrected snapshot: **26
+passed, exit0**, runtime/test sources byte-matched, **no remaining medium/high
+findings in reviewed scope**. Closure log:
+`risk19-rereview-6be30hbf/closure-test.log` beneath the approved temporary root.
+That closure does not validate live newly-owned reservations or authorize recovery.
+
+## Combined source commit checkpoint — 2026-10-12
+
+After the maintenance evidence above, the user explicitly authorized committing
+and pushing **all reviewed source/docs/tests, including concurrent licensing**,
+on `main` without a PR to `manish96170/whisper-py-convert`. Generated binaries,
+audio, models, credentials and caches are excluded. This is source publication,
+not a package release or permission to remove existing reservations. The commit
+transaction follows this documentation checkpoint; verify actual Git/remote state.
+
+Fresh main checks: **483 Python passed/four explicit opt-in skips**, **487 passed/
+zero skips with Apple opt-in**, **26 root STT Swift tests passed**, STT release
+build passed, Ruff/mypy (18 files)/legacy py_compile passed. The independent TTS
+helper again passed **48 Swift tests and release build**, with its existing narrow
+TestingMacros retry; no shared caches were removed. This remains separate from
+native STT coverage. Six simultaneous direct
+Apple calls all completed successfully (**2.651 s** for this local sample), with
+the same borrowed reservation inventory before/after. This validates cooperating
+admission beyond five submitted requests, not newly-owned cleanup or FIFO order.
+
+The separate combined reviewer found no blocking runtime/packaging issues and
+independently verified: **483 passed/four skips** in the checkout, **472 passed/
+15 expected skips** in an extracted sdist (11 repository-only installer checks,
+four native fixtures), offline runtime license inventory exit0, affected-test
+lint, offline disposable wheel-from-sdist build with installed build1.6.1/
+setuptools84.0.0, exact PEP639 expression and byte-identical license inclusion,
+all **30 Python modules byte-matched**, Python-only wheel boundaries, and fresh
+`--no-index --no-deps` install/pip check/engine-free socket-denied smoke. No speech
+asset changes, shared-cache purges or network dependency/model downloads occurred.
+This verifies license engineering/inclusion, not legal enforceability or rights
+in every contribution. Active missing-license/authorization statements and build
+tool examples were reconciled; historical phase snapshots remain unchanged.
+Reviewer closure approved those doc-only corrections with no new blocker and
+confirmed 64 runtime/test/license/packaging files byte-matched its tested snapshot.
+Retained evidence is in `combined-precommit-package-__64sgsn/` (build log,
+extracted package, clean install and artifacts) beneath the approved temporary
+root. Those artifacts predate the final documentation corrections and are not
+published/final release artifacts.
+
+Commit-preparation native evidence is under the approved temporary root:
+`stt-risk19-precommit-{test,build,tts}.log` and
+`stt-risk19-precommit-concurrent.json`. Existing inventory remains full5/5;
+real newly-owned acquisition/release and approved targeted recovery remain open.
 
 ## Network-denied native TTS on macOS
 

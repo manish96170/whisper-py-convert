@@ -6,25 +6,25 @@ separately as a wheel and sdist. These instructions describe local builds
 and release preparation, **not an existing PyPI publication or hosted
 binary release**.
 
-## License: unresolved public-release blocker
+## Project license and remaining release gates
 
-Repository inspection found no authoritative project license: no
-`LICENSE`/`LICENCE`/`COPYING`/`NOTICE` in the source tree or available local
-Git history, and no license grant in package metadata or source headers.
-Do not interpret public source availability, a dependency's license, or
-the plan's open-source-first goal as a license grant for this project.
-The rights holder must select/confirm the license and authorize its text
-before public wheel, sdist, source-archive, or native-binary publication.
-Local packaging checks do not establish permission to redistribute.
+The maintainer selected a **custom proprietary personal-use, non-commercial,
+no-derivatives license** on 2026-10-12. [LICENSE](../LICENSE) supplies the
+terms; [ADR-003](decisions/ADR-003-project-license.md) records the decision.
+This is source-available, **not OSI-approved open source**. Read the
+[licensing guidance](licensing.md) before installation/distribution.
 
-Until then, leave SPDX/license classifiers unset and describe the unknown
-status honestly in the package README. Do not manufacture an MIT/Apache
-license, author identity, or copyright year. After authorization, add the
-actual license file and matching metadata, then inspect the built wheel
-and sdist for the file and declaration. For modern setuptools/PEP 639,
-`license` is the authorized SPDX expression and `license-files` names the
-real files (support requires setuptools 77+); do not put a placeholder
-SPDX expression in today's metadata.
+PEP 639 metadata uses the custom identifier
+`LicenseRef-Mac-Speech-Personal-NonCommercial-NoDerivatives` and
+`license-files = ["LICENSE"]`; setuptools **77+** is required to build it.
+Inspect the actual license text/metadata in both wheel and sdist. No open-source
+classifier, invented copyright attribution/year, legal entity or jurisdiction
+is added. Unchanged-source compilation for permitted personal use is allowed;
+licensee modification, commercial use and redistribution are not granted.
+
+This resolves the **missing-license selection** blocker only. It does not
+create a public release, clear third-party obligations, establish rights in
+every contribution, or replace qualified legal review of enforceability.
 
 Optional dependency licenses, any future model/voice licenses, and Apple's
 SDK/system-voice terms require their own review. No Apple voices or models
@@ -155,7 +155,7 @@ gates below. Do not substitute the Python sdist for this artifact.
 
 Build in a **disposable copy** of the source to keep `build/`, `dist/`,
 egg-info, and native `.build` out of a shared checkout. Copy the intended
-Python source, `pyproject.toml`, `MANIFEST.in`, package README, referenced
+Python source, root `LICENSE`, `pyproject.toml`, `MANIFEST.in`, package README, referenced
 readme file, included docs (including `docs/sbom.md`), unit tests,
 `examples/narration_workflow.py`, `examples/batch_scenes.json`,
 `docs/batch-synthesis.md`, `scripts/smoke_core.py`, and
@@ -163,7 +163,7 @@ readme file, included docs (including `docs/sbom.md`), unit tests,
 audio, or models. In that copy, with a dedicated build venv:
 
 ```sh
-python -m pip install build 'setuptools>=68' wheel
+python -m pip install build 'setuptools>=77' wheel
 python -m build --no-isolation --outdir /path/to/output /path/to/source-copy
 ```
 
@@ -182,8 +182,9 @@ Inspect both archives and their `PKG-INFO`/`METADATA`:
 - Base runtime requirements are empty; any extra requirements are
   explicitly conditional. Optional Google credentials are not needed.
 - The project description/README describes missing-engine behavior,
-  native build/runtime floors, and the unresolved license. Missing license
-  metadata must not be treated as a successful public-license audit.
+  native build/runtime floors, and the selected custom proprietary terms.
+  Both archives include the real `LICENSE`; a metadata presence check is
+  not legal/license-compatibility clearance or publication authorization.
 - Native binaries/source trees, models, build outputs, credentials, local
   paths, and private data are absent. Unit tests are in the sdist, not
   installed as wrapper packages in the wheel.

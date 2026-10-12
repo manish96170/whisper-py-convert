@@ -66,23 +66,33 @@ sequenceDiagram
 
 `Sources/WhisperAppleTranscribe/main.swift` performs these steps:
 
-1. Validate the input path and requested locale.
-2. Create a `SpeechTranscriber` and check/install its Apple-managed assets.
+1. Validate the input path; acquire the cooperating per-user STT lock and resolve
+   `SpeechTranscriber.supportedLocale(equivalentTo:)` (report regional substitution).
+2. Reserve the supporting asset locale. `false` means reuse, not unsupported.
+   Identify newly-owned reservations from the actual inventory delta, then create
+   the transcriber and check/install its Apple-managed assets.
 3. Create an `AVAsset` and `AssetInputSequenceProvider`, allowing audio/video
    containers such as MP3 and MP4 to be decoded by the system.
 4. Feed the provider sequence into `SpeechAnalyzer`.
 5. Consume finalized `SpeechTranscriber` results and write them to stdout.
+6. On error/cancellation, stop the analyzer and await the result collector before
+   releasing newly-owned reservations. On success await collection/output/cleanup.
+   Borrowed pre-existing reservations are never released. Unlock only afterward.
 
 The root source manifest requires Swift tools **6.4**. The target is macOS 27 because `AssetInputSequenceProvider` and the current
 audio/video sequence path are macOS 27 APIs. The Apple backend is therefore
 optional; the Python/faster-whisper path remains the fallback on older macOS
 versions and other operating systems.
 
-The existing locale reservation is not released by this helper; repeated
-language changes can exhaust Apple's five-locale quota. This remains
-[risk #19](docs/risk-register.md), not a Phase 12 repair. An available binary
-does not guarantee a successful transcription; four real STT fixtures currently
-skip for the documented failure.
+The separately authorized [risk #19 repair](docs/stt-reservation-repair.md)
+corrects both the original missing release and false-return interpretation.
+Capacity is device-specific `maximumReservedLocales`, not a five-recording quota.
+The gate serializes cooperating CLI processes across locales (reduced parallel
+STT throughput); it does not coordinate old binaries or other app clients.
+SIGINT/SIGTERM request cancellation and await cleanup; SIGKILL/power loss cannot.
+`--inventory-status [--language ...]` is a read-only diagnostic in this binary's
+identity. Full existing inventory is not automatically reset. Real newly-owned
+cleanup/recovery remains unverified until capacity is available; risk is partial.
 
 The Windows helper is an optional MSIX-packaged C# executable. It uses Windows
 AI Speech batch recognition on supported Windows 11 24H2+ hardware. It

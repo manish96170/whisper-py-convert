@@ -1,7 +1,14 @@
 # ADR-002: Python distributions and source-built native engines
 
-**Status:** Accepted for local packaging; public release blocked on licensing
+**Status:** Accepted; original missing-license gate addressed by ADR-003
 **Date:** 2026-10-11
+
+**Licensing update (2026-10-12):** the maintainer selected the custom
+proprietary license recorded in [ADR-003](ADR-003-project-license.md).
+The discovery/context below records the original Phase 12 state. Current
+terms are in [LICENSE](../../LICENSE); source availability is not OSI-open-source
+licensing or permission for commercial/modification use. Other release gates
+and third-party rights remain separate.
 
 ## Context
 
@@ -75,8 +82,9 @@ redistribution terms. There is no basis for inventing a license.
 - Source builds reduce release infrastructure and credential requirements
   but require users to establish trust in source and their compiler. They
   are not guaranteed byte-for-byte reproducible across toolchains.
-- A working local wheel/sdist does not resolve the license blocker, reserve
-  the `mac-speech` PyPI name, or mean PyPI packages, signed tags, repository
+- A working local wheel/sdist alone did not resolve the original missing-license
+  blocker; ADR-003 records the later explicit selection. Local builds still do
+  not reserve the `mac-speech` PyPI name or mean PyPI packages, signed tags, repository
   source tarballs, or native release assets have been published.
 - `docs/packaging.md` is the release/trust/signing reference;
   `docs/installation.md` remains the operational install/upgrade/uninstall

@@ -20,11 +20,11 @@ upstream releases, **not versions resolved for a mac-speech release**.
   toolchain, macOS/frameworks and downloaded system voices have their own
   terms; the absence of package dependencies is not a claim that those terms
   do not apply.
-- **Project license unresolved:** no root `LICENSE`/`COPYING` file or project
-  license declaration was found. Do not assign MIT, Apache-2.0, or another
-  dependency's license to this repository. Public distribution remains
-  blocked pending the rights holder's decision; see
-  [packaging](packaging.md) and [ADR-002](decisions/ADR-002-packaging-and-distribution.md).
+- **Project license selected on 2026-10-12:** custom proprietary personal-use,
+  non-commercial, no-derivatives terms in [LICENSE](../LICENSE), identified
+  by `LicenseRef-Mac-Speech-Personal-NonCommercial-NoDerivatives`. It is not
+  OSI-approved open source and does not relicense third-party components.
+  See [licensing](licensing.md) and [ADR-003](decisions/ADR-003-project-license.md).
 - `setuptools` is a **build/development dependency**, not a runtime dependency.
   An isolated wheel build resolves `[build-system].requires` separately.
   `pip`, `wheel`, `build`, test runners and audit tools used by a release job
@@ -40,7 +40,7 @@ not silently converted to an SPDX expression by the script.
 
 | Scope | Exact source declaration | License evidence for the reviewed example release | Version-specific evidence |
 | --- | --- | --- | --- |
-| Build/development | `setuptools>=68` | MIT; `License-Expression: MIT` in **84.0.0** | [PyPI JSON](https://pypi.org/pypi/setuptools/84.0.0/json), [source](https://github.com/pypa/setuptools) |
+| Build/development | `setuptools>=77` | MIT; `License-Expression: MIT` in **84.0.0** | [PyPI JSON](https://pypi.org/pypi/setuptools/84.0.0/json), [source](https://github.com/pypa/setuptools) |
 | `dev` only: tests | `pytest>=7.4` | MIT; `License-Expression: MIT` in **9.1.1** | [PyPI JSON](https://pypi.org/pypi/pytest/9.1.1/json), [source](https://github.com/pytest-dev/pytest) |
 | `dev` only: lint | `ruff==0.14.14` | MIT license classifier in **0.14.14**; no SPDX-expression field reported | [PyPI JSON](https://pypi.org/pypi/ruff/0.14.14/json), [source](https://github.com/astral-sh/ruff) |
 | `dev` only: type checks | `mypy==1.15.0` | `License: MIT` and MIT classifier in **1.15.0** | [PyPI JSON](https://pypi.org/pypi/mypy/1.15.0/json), [source](https://github.com/python/mypy) |
@@ -107,8 +107,9 @@ lookup occurs.
 Exit status is **0** for successful report generation, even with findings;
 **1** with `--check` for incomplete selected dependency/project license
 metadata; **2** for invalid input. Currently `--group runtime --check`
-correctly fails because the project license is unresolved, not because the
-base needs packages. `--check` is only a metadata-completeness gate, **not a
+now passes with the selected project license and empty base dependencies.
+Earlier snapshots failed for the then-unresolved project license. `--check`
+is only a metadata-completeness gate, **not a
 license-compatibility, version-satisfaction or vulnerability gate**. It does
 not evaluate requirement ranges/markers, inspect source license text, validate
 dependency license files on disk, discover native bundled libraries, or parse Swift
@@ -132,7 +133,8 @@ venv installed only the wrapper, with no optional extras.
 ## Before a release: resolved inventory/SBOM and security review
 
 Keep the above lightweight source inventory for maintenance. For any actual
-release, after resolving the project-license blocker:
+release, after confirming the selected proprietary terms/legal authority
+and remaining publication requirements:
 
 1. Start from the intended commit and build wheel/sdist in an isolated build
    environment. Record commit, Python/Swift/Xcode/SDK/macOS versions, build

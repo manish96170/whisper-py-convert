@@ -29,6 +29,13 @@ specific reviewed revision is actually released.
 
 ### Added
 
+- Apple STT reservation maintenance: already-reserved false returns are reused,
+  newly-owned supporting locale variants are released with awaited cleanup, and
+  cooperating native calls serialize through analysis/output/cleanup. Additive
+  read-only `--inventory-status` and named Speech error diagnostics distinguish
+  locale/capacity failures; graceful cancellation and pipe backpressure are covered.
+  Transcript/text/SRT contracts and independent TTS are unchanged. Real borrowed
+  reuse passes; newly-owned native cleanup remains a separate validation gate.
 - Phase 13B bounded TTS-only batches: default one worker, explicit cap 1–4,
   finite validated scene JSON, input-ordered private `batch.json` and per-scene
   workflow checkpoints. No implicit STT, playback, export or model download.
@@ -78,9 +85,12 @@ specific reviewed revision is actually released.
 
 ### Known limitations / release gates
 
-- Apple STT's pre-existing locale-reservation exhaustion can reject new
-  languages after five reservations. This is documented, not fixed;
-  STT fixture skips are not proof of a full STT regression pass.
+- Apple STT risk #19 is **partially repaired**: capacity is device-specific, not
+  universally five or a process/request quota. Existing full reservation state
+  can still reject a new supporting locale and is not automatically evicted.
+  Borrowed-reservation fixtures pass; real newly-owned release remains blocked
+  pending a free slot or explicitly approved targeted recovery. Default native
+  skips are now explicit prerequisites, never generic unsupported-locale catches.
 - Personal Voice authorization is report-only. Voice catalog membership
   can vary; there is no creation/extraction/unlocking flow.
 - Concurrent playback shares a single PID-file control slot by default.
@@ -90,10 +100,11 @@ specific reviewed revision is actually released.
 - Google Drive real-account upload, S3 real upload/large-file verification,
   and a real Slack post have not been validated. Provider mocks and
   selected S3/Slack dry-runs do not establish production readiness.
-- A project license has **not yet been established**. Do not infer one
-  from dependencies or describe a public distribution as license-cleared.
-  Signing/notarization and distribution policy are in
-  [packaging.md](docs/packaging.md).
+- The maintainer selected custom proprietary personal-use/non-commercial/
+  no-derivatives terms on 2026-10-12; see [LICENSE](LICENSE). This is not
+  OSI-approved open source and does not replace third-party rights/terms.
+  Missing-license selection is resolved, but legal/compliance review and
+  explicit publication/signing decisions remain separate release gates.
 
 ### Evidence baseline
 

@@ -2,8 +2,10 @@
 
 **No public release was made by Phase 12.** The current `0.1.0` package
 version is development metadata, not evidence of a published tag, PyPI
-package, signed binary, or notarization. Public publication remains blocked
-until the rights holder supplies an authorized project license.
+package, signed binary, or notarization. The maintainer has now selected the
+custom proprietary license in [LICENSE](../LICENSE)/[licensing guidance](licensing.md).
+Missing-license selection is resolved; public publication still needs explicit
+approval and the other checks below, including legal/third-party review.
 
 This is a human-controlled checklist, not an automatic publishing pipeline.
 See [packaging](packaging.md) for artifact boundaries/trust/signing,
@@ -12,8 +14,10 @@ See [packaging](packaging.md) for artifact boundaries/trust/signing,
 
 ## Before preparing public artifacts
 
-- Resolve the project license; add its authorized text and matching package
-  metadata. Dependency licenses do not grant rights to this project's code.
+- Verify the selected custom proprietary license text and matching package
+  metadata/inclusion. Do not label it open source; confirm rights-holder
+  authority and obtain appropriate legal review. Dependency licenses do not
+  grant rights to this project's code or become subject to its restrictions.
 - Review all intended source, including untracked files, and confirm the
   selected commit actually contains it (`git archive` omits untracked/dirty
   changes). Commit/push must be explicitly authorized; authorization for that

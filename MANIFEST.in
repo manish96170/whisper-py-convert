@@ -1,9 +1,12 @@
 # This is the Python sdist, not the full repository/native-source archive.
+include LICENSE
+include docs/licensing.md
 include python/README.md
 include docs/packaging.md
 include docs/sbom.md
 include docs/batch-synthesis.md
 include docs/decisions/ADR-002-packaging-and-distribution.md
+include docs/decisions/ADR-003-project-license.md
 recursive-include tests/unit *.py
 # Standalone Python helpers exercised by the packaged unit tests.
 include examples/narration_workflow.py

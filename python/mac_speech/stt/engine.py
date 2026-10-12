@@ -50,6 +50,32 @@ def resolve_whisper_py_convert() -> Path:
 
 
 def _classify_failure(stderr: str, returncode: int) -> MacSpeechError:
+    # Native stage markers survive both direct JSON and the unchanged legacy
+    # script's stderr forwarding. Check them before broad legacy heuristics:
+    # a framework's "unavailable" is not proof that the binary is missing.
+    if "Error: [cancelled]" in stderr:
+        return MacSpeechError(
+            code=ErrorCode.CANCELLED,
+            message=stderr.strip(),
+            remedy="Inspect any reservation cleanup warnings before retrying.",
+        )
+    remedies = {
+        "unsupported_locale": "Choose a locale supported by Apple SpeechTranscriber on this Mac.",
+        "reservation_capacity": (
+            "Inspect this same Apple binary with --inventory-status. Capacity is device-specific; "
+            "do not delete speech assets or release unrelated reservations automatically."
+        ),
+        "reservation_failed": "Inspect the included Apple framework domain/code and this binary's --inventory-status.",
+        "reservation_ownership": "Inspect --inventory-status; ownership was ambiguous and no global reset was attempted.",
+        "reservation_cleanup": "Inspect --inventory-status; owned reservation cleanup could not be confirmed.",
+        "reservation_coordination": "Check the owned private Apple STT lock directory; do not unlink an active lock file.",
+        "asset_installation": "Check installed Apple speech assets and the included framework domain/code.",
+        "transcription_failed": "Check the media input and included Apple framework domain/code.",
+        "output_failed": "Check stdout/output destination and the included error information.",
+    }
+    for marker, remedy in remedies.items():
+        if f"Error: [{marker}]" in stderr:
+            return MacSpeechError(code=ErrorCode.NATIVE_PROCESS_ERROR, message=stderr.strip(), remedy=remedy)
     lowered = stderr.lower()
     if "does not exist" in lowered or "not a file" in lowered:
         return MacSpeechError(code=ErrorCode.INPUT_NOT_FOUND, message=stderr.strip() or "Input file not found.")

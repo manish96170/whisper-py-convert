@@ -3,9 +3,7 @@
 Subprocess calls are mocked throughout — these tests never spawn the real
 `whisper-py-convert`/`whisper-py-convert-apple` processes, per PLAN.md
 section 8.1. The real engines are exercised manually (see
-docs/risk-register.md risk #19 for a known environmental flakiness in the
-Apple engine's locale/asset reservation on this machine, unrelated to
-this adapter's code).
+docs/risk-register.md risk #19 for native reservation lifecycle evidence).
 """
 
 from __future__ import annotations
@@ -256,3 +254,31 @@ def test_run_json_dispatches_by_resolved_engine(monkeypatch):
     monkeypatch.setattr(engine, "_resolve_engine_for_json", lambda requested: "windows")
     monkeypatch.setattr(engine, "_run_windows_text_only", lambda path, timeout: "windows-result")
     assert engine.run_json("r.mp3") == "windows-result"
+
+
+@pytest.mark.parametrize("marker", [
+    "unsupported_locale", "reservation_capacity", "reservation_failed",
+    "reservation_ownership", "reservation_cleanup", "reservation_coordination",
+    "asset_installation", "transcription_failed", "output_failed",
+])
+@pytest.mark.parametrize("direct_json", [False, True])
+def test_native_stage_failures_preserve_diagnostics_and_actionable_remedy(monkeypatch, tmp_path, marker, direct_json):
+    binary = tmp_path / "whisper-py-convert-apple"
+    monkeypatch.setattr(engine, "find_apple_stt_binary", lambda: binary)
+    monkeypatch.setattr(engine, "find_whisper_py_convert", lambda: tmp_path / "whisper-py-convert.py")
+    stderr = f"Engine: apple\nError: [{marker}] Framework unavailable (SpeechErrorDomain, code 42)\n"
+    with patch.object(subprocess, "run", return_value=_fake_result(stderr=stderr, returncode=1)):
+        with pytest.raises(MacSpeechError) as excinfo:
+            if direct_json:
+                engine.run_json("r.aiff", engine="apple")
+            else:
+                engine.run_text_or_srt("r.aiff", output_format="text", engine="apple")
+    assert excinfo.value.code == ErrorCode.NATIVE_PROCESS_ERROR
+    assert excinfo.value.message == stderr.strip()
+    assert excinfo.value.remedy
+
+
+def test_native_cooperative_cancellation_is_not_engine_missing():
+    error = engine._classify_failure("Error: [cancelled] Cancelled; assets unavailable (SpeechErrorDomain, code 1)", 130)
+    assert error.code == ErrorCode.CANCELLED
+    assert error.remedy

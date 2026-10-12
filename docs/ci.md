@@ -30,7 +30,7 @@ are mocked wrapper tests, not proof of native-engine support on Intel Macs:
   checks audit/smoke/narration/lifecycle, file/workflow and batch/cancellation tests, outside
   Ruff's package-only configured include list.
 - **Offline inventory:** the quality job reports the empty base dependency
-  surface and unresolved project license. It does not run `--check` or
+  surface and selected custom project license. It does not run `--check` or
   represent a public-release/vulnerability clearance; publication stays gated.
 
 Ruff and mypy are pinned, **development-only** dependencies in `.[dev]`.

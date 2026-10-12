@@ -81,7 +81,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install build tools (not runtime dependencies)
-        run: python -m pip install build 'setuptools>=68' wheel
+        run: python -m pip install build 'setuptools>=77' wheel
       - name: Build sdist and wheel from sdist
         run: python -m build --outdir "$RUNNER_TEMP/mac-speech-dist"
       - name: Install only the wheel into a clean environment
