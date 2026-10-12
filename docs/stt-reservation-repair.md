@@ -1,9 +1,25 @@
 # Apple STT reservation maintenance — risk #19
 
+**Current result:** the later approved reservation-first cached test completed
+real owned acquisition/cleanup across success, provider/output failure and
+cooperative cancellation after input consumption. Local risk #19 source defects
+are now resolved with artifact/readback evidence in [verification](verification.md).
+The historical partial repair narrative below is retained. Explicit setup/readiness
+UX is [documented separately](apple-asset-setup.md); cached retention, abrupt death,
+other clients/platforms and deployment remain limits.
+
 **2026-10-12; partially repaired, not fully resolved.** This is separately
 authorized maintenance of the native Apple STT target, not a TTS refactor or
 Phase 13 feature expansion. Baseline was clean `main`,
 `ad414abf9dce8b0055aa8a1810355aacb2e1bc0c`.
+
+**Follow-up:** the original repair was pushed as `4769606` with green hosted Python
+CI. Approved, uncommitted [maintenance safeguards](stt-reservation-maintenance.md)
+add locked preview, explicit exact-target controls, optional offline/strict
+validation and fully awaited cancellation-isolated cleanup. All English regions
+remain supported. A later approved en_CA release was verified, leaving4/5, then
+SDK installed status became false and the window stopped before owned tests.
+New recovery/download/re-pin or commit/push needs separate approval.
 
 ## Defects and current API evidence
 

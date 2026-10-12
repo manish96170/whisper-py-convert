@@ -1,6 +1,27 @@
 import Foundation
 import Speech
 
+/// Opt-in evidence that analyzeSequence actually requested a real input element,
+/// not just that its admission boundary was reached. Default output is unchanged.
+struct ObservedAnalyzerInputs<Base: AsyncSequence & Sendable>: AsyncSequence, Sendable {
+    typealias Element = Base.Element
+    let base: Base
+    let onFirstInput: @Sendable () -> Void
+    struct AsyncIterator: AsyncIteratorProtocol {
+        var iterator: Base.AsyncIterator
+        let onFirstInput: @Sendable () -> Void
+        var observed = false
+        mutating func next() async throws -> Element? {
+            let value = try await iterator.next()
+            if value != nil && !observed { observed = true; onFirstInput() }
+            return value
+        }
+    }
+    func makeAsyncIterator() -> AsyncIterator {
+        AsyncIterator(iterator: base.makeAsyncIterator(), onFirstInput: onFirstInput)
+    }
+}
+
 /// A cancellation handler may initiate the framework stop while analysis is
 /// suspended. The error path awaits this SAME task before draining results and
 /// releasing assets; it is not fire-and-forget cleanup.

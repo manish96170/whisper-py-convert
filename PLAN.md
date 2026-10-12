@@ -1,6 +1,6 @@
 # Mac Speech Toolkit --- Phased Product and Engineering Plan
 
-**Status:** STT risk #19 partially verified; combined source/licensing commit and push authorized\
+**Status:** Risk #19 locally resolved with owned native evidence; explicit asset setup uncommitted\
 **Purpose:** A durable implementation plan for GPT, Codex, Claude Code,
 OpenCode, or other local coding agents.\
 **Primary platform:** macOS on Apple Silicon, starting with the user's
@@ -1261,13 +1261,16 @@ continue unrelated Phase 13 features. Clean baseline independently verified:
   preflight and opt-in; provisioned regressions fail.
 - [x] Real seven-recording en-US repetition, installed regional switching,
   borrowed-state invalid-media failure and text/JSON/segment+word SRT evidence.
-- [ ] Real **newly-owned** reservation release after success/post-acquisition
-  failure and any targeted existing-state recovery. Full same-executable inventory
-  (five existing reservations, capacity five) blocks this without separately
-  approved targeted release. Do not remove unrelated reservations/assets.
+- [x] Real newly-owned release after success, provider failure, closed output and
+  cooperative cancellation after input consumption. The separately approved en_CA
+  release/reacquisition windows returned to the same four other reservations;
+  no downloads, global reset, other pre-existing releases or re-pinning occurred.
 - [x] Complete final independent review/rechecks and record exact verification.
 
-Status remains **partial**, not resolved on mocks/reuse alone. Details and exact
+Status is **locally resolved for the two source defects** on the recorded Mac/SDK/
+artifact, with real new ownership plus cleanup/readback evidence, not mocks alone.
+Cached availability, abrupt death/non-cooperating clients, other platforms and
+deployment of old installed binaries remain limits. Details and exact
 command evidence: `docs/stt-reservation-repair.md`, `docs/verification.md`, current
 handoff. Historical per-phase snapshots remain untouched. Implementation did
 not include a commit/push, download, global reset or signing change. The user
@@ -1276,6 +1279,82 @@ commit and push on main, no PR**. This transaction does not authorize reservatio
 eviction/recovery, a new queue service, package release or future automatic commits.
 
 ## 8.1 Unit tests
+
+### Authorized follow-up — safe reservation maintenance (2026-10-12)
+
+The combined source commit/push completed at `4769606b3d3aa9a38fa4b59dedc4b75d49b721cc`;
+hosted CI run `38213808150` succeeded (Python/quality/clean wheel, native opt-in
+job skipped). The user subsequently approved implementing the bounded recovery
+recommendation from independent GPT Terra/Claude Opus design consultations.
+Default stays en-US; Canadian/British/Australian/Indian English remain supported.
+No region is declared unused merely because it is not the default.
+
+- [x] Locked maintenance inspect/preview, and explicit exact single-target
+  release with matching confirmation and unused/quiescent-client acknowledgement.
+- [x] Optional installed-assets-only, exact-locale and newly-owned validation
+  guards; preserve normal CLI defaults, transcript contract and all regions.
+- [x] Isolate cleanup from caller cancellation and fully await release/readback;
+  test cancellation-sensitive inventory mocks (not an asserted Apple defect).
+- [x] Focused tests, borrowed-only native regression, independent review and docs.
+- [x] One approved temporary en_CA maintenance release/readback: SDK returned
+  true, only en_CA removed, four other reservations preserved.
+- [x] Real newly-owned acquisition/release validation, after the initial **STOP** because the
+  exact en_CA installed status became false after release. No transcription,
+  reacquisition, installation/download or re-pinning followed. SDK still supports
+  en_CA; physical file deletion is not established. New recovery scope needs approval.
+
+The stopped result above is historical. The user then approved reservation-first
+temporary no-download reacquisition; cached assets became ready while bound and
+all four owned native outcomes passed, followed by seven owned repetitions and
+five regional switches. Independent retained-evidence review found no new blocker
+and supports local risk #19 resolution. No sustained neural-inference timing or
+OS-wide network-activity claim is made. Latest readiness UX source disables implicit
+transcription downloads and requires explicit asset-setup confirmation.
+
+No ledger, persistent worker/cache, daemon, automatic pruning, asset download,
+global reset, installed-binary replacement or new commit/push is authorized here.
+The source maintenance interface is authorized; using its mutating path still
+required separate exact-target approval, now granted for the bounded en_CA window.
+The latest request also authorizes **TUI idea/design gathering**, not a full TUI,
+new worker/cache service or source push. Preserve historical checkpoints below.
+`docs/tui-proposal.md` records an optional STT/TTS/jobs/assets workspace, owned
+process controls and preview-first maintenance; no frontend/dependency was added.
+Validation-only ownership/analysis stderr events were added before the action;
+47 Swift tests/release build passed. Real stopped-window JSON and executable
+fingerprint are in `stt-approved-window-q645k4du/` under the approved temporary root.
+Local evidence: **46 Swift STT tests/release build**, **491 Python/four opt-in
+skips**, **495 with Apple opt-in/zero skips**, **48 independent TTS tests/release
+build**, Ruff/mypy/legacy py_compile. Five regional offline word-JSON transcriptions
+and locked previews pass without changing inventory; new-owned guard rejects
+borrowed success. Independent reviewer reran 46 Swift tests and closed both medium
+mock findings. These earlier safeguard counts remain history; the window above
+does not count as owned-transcription evidence. Changes remain uncommitted and
+risk #19 remains partial, with current inventory4/5 and exact en_CA uninstalled.
+
+### Latest approved scope — cached reacquisition and generic readiness UX
+
+The user approved temporary metadata-only en_CA reacquisition even though the SDK
+pre-reservation installed flag is false: after binding, refuse analysis unless
+ready, never create an installation request/download, and clean only new ownership.
+The initial trial proved true en_CA acquisition, successful word JSON and joined
+release/readback to the same four reservations without installation. Further
+invalid/cancellation/output evidence is recorded in verification, not inferred.
+
+The user also requested generic CLI/Python language setup guidance (e.g. French)
+before analysis. Native transcription now forbids implicit downloads by default;
+explicit `--install-assets` preview/confirmed setup is the only installation path.
+Confirmed setup may retain a reservation intentionally for offline caching; it is
+not auto-executed by the agent. Python preflights the exact selected helper and
+prints its quoted resolved-locale setup command. This approved first-use behavior
+change preserves transcript formats/all regions/base dependencies and does not
+authorize a French download, persistent CA re-pin, new commit/push or TUI build.
+See `docs/apple-asset-setup.md`.
+
+The user subsequently requested committing/pushing this reviewed follow-up on
+main/no-PR to the existing `manish96170` repository. This source-only transaction
+supersedes the implementation checkpoint's no-commit restriction for this push
+only; it does not authorize another real asset operation, installation/download,
+binary replacement, TUI implementation or future automatic publication.
 
 -   Input validation, configuration precedence, serialization, error
     mapping, filename handling, manifest schema, and CLI parsing.
@@ -1428,10 +1507,11 @@ The initial product is considered successful when:
 -   [x] TTS can speak text and save a valid audio file.
 -   [x] A lightweight Python wrapper and CLI provide a stable,
     documented interface.
--   [ ] Existing STT continues working with no regression.
-    Real borrowed-reservation text/JSON/SRT and concurrent calls now pass;
-    newly-owned native release validation remains blocked by full inventory
-    (risk #19). Default-suite native skips are explicit opt-in prerequisites.
+-   [x] Existing STT compatibility and owned cleanup validated locally.
+    Real borrowed text/JSON/SRT/concurrent calls and owned success/failure/input-
+    consumption cancellation now pass on the recorded Mac/SDK/artifact (risk #19).
+    Other platforms/cache retention/abrupt death remain limits; default native
+    skips are explicit opt-in prerequisites. First-use Apple setup is now explicit.
 -   [x] STT and TTS can be installed and used independently.
 -   [x] Available voices and capabilities are discovered rather than
     assumed.

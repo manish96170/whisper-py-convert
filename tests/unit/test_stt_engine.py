@@ -8,6 +8,7 @@ docs/risk-register.md risk #19 for native reservation lifecycle evidence).
 
 from __future__ import annotations
 
+import json
 import subprocess
 from unittest.mock import MagicMock, patch
 
@@ -25,6 +26,21 @@ def _fake_result(stdout: str = "", stderr: str = "", returncode: int = 0) -> Mag
     return result
 
 
+def _ready_assets() -> MagicMock:
+    return _fake_result(stdout=json.dumps({
+        "available": True, "supported_locale": "en_US", "installed": True,
+        "reserved_locales": ["en_US"], "maximum_reserved_locales": 7,
+        "asset_setup_supported": True, "automatic_asset_downloads": False,
+    }))
+
+
+def _legacy_binary(script):
+    binary = script.parent / "whisper-py-convert-apple"
+    binary.write_text("# mocked executable\n")
+    binary.chmod(0o700)
+    return binary
+
+
 def test_resolve_whisper_py_convert_raises_engine_not_found(monkeypatch):
     monkeypatch.setattr(engine, "find_whisper_py_convert", lambda: None)
     with pytest.raises(MacSpeechError) as excinfo:
@@ -37,13 +53,16 @@ def test_run_text_or_srt_success_parses_engine_line(monkeypatch, tmp_path):
     script.write_text("# fake\n")
     monkeypatch.setattr(engine, "find_whisper_py_convert", lambda: script)
 
+    binary = _legacy_binary(script)
     result = _fake_result(stdout="Hello world.\n", stderr="Engine: apple\n")
-    with patch.object(subprocess, "run", return_value=result) as run:
+    with patch.object(subprocess, "run", side_effect=[_ready_assets(), result]) as run:
         transcribe_result = engine.run_text_or_srt("recording.mp3", output_format="text")
 
     assert transcribe_result.engine == "apple"
     assert transcribe_result.format == "text"
     assert transcribe_result.content == "Hello world.\n"
+    assert run.call_count == 2
+    assert run.call_args_list[0].args[0] == [str(binary), "--inventory-status", "--language", "en-US"]
     command = run.call_args.args[0]
     assert command[1] == str(script)
     assert command[-1] == "recording.mp3"
@@ -53,9 +72,10 @@ def test_run_text_or_srt_builds_srt_word_ts_flags(monkeypatch, tmp_path):
     script = tmp_path / "whisper-py-convert.py"
     script.write_text("# fake\n")
     monkeypatch.setattr(engine, "find_whisper_py_convert", lambda: script)
+    _legacy_binary(script)
     result = _fake_result(stdout="1\n00:00:00,000 --> 00:00:01,000\nHi\n", stderr="Engine: apple\n")
 
-    with patch.object(subprocess, "run", return_value=result) as run:
+    with patch.object(subprocess, "run", side_effect=[_ready_assets(), result]) as run:
         engine.run_text_or_srt(
             "r.mp3", output_format="srt", word_ts=True, model="small.en", language="en-US"
         )
@@ -85,10 +105,11 @@ def test_run_text_or_srt_engine_unavailable(monkeypatch, tmp_path):
     monkeypatch.setattr(engine, "find_whisper_py_convert", lambda: script)
     result = _fake_result(stderr="Apple Speech backend is not built. Run ./install.sh", returncode=1)
 
-    with patch.object(subprocess, "run", return_value=result):
+    with patch.object(subprocess, "run", return_value=result) as run:
         with pytest.raises(MacSpeechError) as excinfo:
             engine.run_text_or_srt("x.mp3", output_format="text", engine="apple")
     assert excinfo.value.code == ErrorCode.ENGINE_NOT_FOUND
+    run.assert_not_called()
 
 
 def test_run_text_or_srt_generic_failure(monkeypatch, tmp_path):
@@ -173,7 +194,7 @@ def test_run_apple_json_parses_segments_and_words(monkeypatch, tmp_path):
         '"words": [{"text": "Hello", "start": 0.0, "end": 0.5}, {"text": "world.", "start": 0.5, "end": 1.0}]}]}'
     )
     result = _fake_result(stdout=payload, stderr="")
-    with patch.object(subprocess, "run", return_value=result):
+    with patch.object(subprocess, "run", side_effect=[_ready_assets(), result]) as run:
         transcript = engine._run_apple_json("r.mp3", language=None, timeout=30)
 
     assert transcript.engine == "apple"
@@ -181,6 +202,7 @@ def test_run_apple_json_parses_segments_and_words(monkeypatch, tmp_path):
     assert transcript.segments[0].text == "Hello world."
     assert len(transcript.segments[0].words) == 2
     assert transcript.text == "Hello world.\n"
+    assert run.call_count == 2
 
 
 def test_run_apple_json_invalid_json_raises(monkeypatch, tmp_path):
@@ -188,10 +210,11 @@ def test_run_apple_json_invalid_json_raises(monkeypatch, tmp_path):
     fake_binary.write_text("#!/bin/sh\n")
     monkeypatch.setattr(engine, "find_apple_stt_binary", lambda: fake_binary)
     result = _fake_result(stdout="not json", stderr="")
-    with patch.object(subprocess, "run", return_value=result):
+    with patch.object(subprocess, "run", side_effect=[_ready_assets(), result]) as run:
         with pytest.raises(MacSpeechError) as excinfo:
             engine._run_apple_json("r.mp3", language=None, timeout=30)
     assert excinfo.value.code == ErrorCode.NATIVE_PROCESS_ERROR
+    assert run.call_count == 2
 
 
 def test_run_windows_text_only_wraps_as_single_segment(monkeypatch, tmp_path):
@@ -260,14 +283,15 @@ def test_run_json_dispatches_by_resolved_engine(monkeypatch):
     "unsupported_locale", "reservation_capacity", "reservation_failed",
     "reservation_ownership", "reservation_cleanup", "reservation_coordination",
     "asset_installation", "transcription_failed", "output_failed",
+    "assets_not_installed", "locale_substitution", "new_reservation_required", "reservation_maintenance",
 ])
 @pytest.mark.parametrize("direct_json", [False, True])
 def test_native_stage_failures_preserve_diagnostics_and_actionable_remedy(monkeypatch, tmp_path, marker, direct_json):
-    binary = tmp_path / "whisper-py-convert-apple"
+    binary = _legacy_binary(tmp_path / "whisper-py-convert.py")
     monkeypatch.setattr(engine, "find_apple_stt_binary", lambda: binary)
     monkeypatch.setattr(engine, "find_whisper_py_convert", lambda: tmp_path / "whisper-py-convert.py")
     stderr = f"Engine: apple\nError: [{marker}] Framework unavailable (SpeechErrorDomain, code 42)\n"
-    with patch.object(subprocess, "run", return_value=_fake_result(stderr=stderr, returncode=1)):
+    with patch.object(subprocess, "run", side_effect=[_ready_assets(), _fake_result(stderr=stderr, returncode=1)]) as run:
         with pytest.raises(MacSpeechError) as excinfo:
             if direct_json:
                 engine.run_json("r.aiff", engine="apple")
@@ -276,6 +300,7 @@ def test_native_stage_failures_preserve_diagnostics_and_actionable_remedy(monkey
     assert excinfo.value.code == ErrorCode.NATIVE_PROCESS_ERROR
     assert excinfo.value.message == stderr.strip()
     assert excinfo.value.remedy
+    assert run.call_count == 2
 
 
 def test_native_cooperative_cancellation_is_not_engine_missing():

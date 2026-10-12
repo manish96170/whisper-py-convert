@@ -29,7 +29,7 @@ establish native macOS 27 STT coverage.
   provisioned Swift 6.4 macOS runner. Local evidence and limits are in
   [verification](verification.md), [CI](ci.md), and [platform support](platform-support.md).
 
-Apple STT [risk #19](risk-register.md) is **partially repaired** in separately
+Apple STT [risk #19](risk-register.md) is **locally resolved** in separately
 authorized maintenance (2026-10-12). The helper resolves a supported equivalent,
 serializes cooperating per-user invocations through awaited cleanup, borrows
 pre-existing reservations and releases only its uniquely identified new asset
@@ -37,6 +37,17 @@ locale. The native transcript contract and independent TTS package are unchanged
 Read-only `--inventory-status` reports this executable's reservation state;
 neither it nor the repair resets old state. See [repair evidence](stt-reservation-repair.md).
 Native success is never inferred from diagnostics or skipped tests.
+The approved en_CA window now has actual owned success/provider-failure/output-
+failure/cancellation and readback evidence. Metadata-only binding exposed cached
+data after idle SDK status reported uninstalled; this is not a retention guarantee.
+Public Python readiness checks use the exact selected native helper and show an
+explicit setup command before analysis. Native transcription never downloads;
+confirmed setup is separate and deliberately retains a subscription on success.
+See [generic asset setup](apple-asset-setup.md).
+The approved follow-up adds operator-only exact-target maintenance and optional
+offline validation, not a daemon or automatic eviction. Cancellation-isolated
+cleanup is **fully awaited** with readback while the gate stays held. Public
+regional choices remain intact; see [maintenance safety](stt-reservation-maintenance.md).
 Neural-engine installation and real remote export validation remain deferred.
 
 ## Historical Phase 0 discovery (2026-10-09)

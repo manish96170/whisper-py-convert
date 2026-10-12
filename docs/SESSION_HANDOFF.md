@@ -1,4 +1,211 @@
-# Session handoff — Apple STT risk #19 maintenance
+# Session handoff — explicit Apple asset setup and live ownership proof
+
+**Source transaction checkpoint:** the user has now separately requested
+"commit and push" for this reviewed follow-up, retaining the main/no-PR workflow
+to `manish96170/whisper-py-convert`. Current GitHub account/access and matching
+local/origin baseline `4769606` were independently verified. Commit execution
+follows this documentation checkpoint; verify actual Git/remote state rather
+than infer a new hash from this file. Only reviewed source/tests/docs are included;
+generated/private artifacts, installed binary replacement, asset downloads,
+new real maintenance actions, full TUI and future automatic commits remain excluded.
+
+**Latest checkpoint (2026-10-12):** the user approved a temporary no-download en_CA
+reacquisition after the stopped release window, plus generic pre-analysis language
+readiness/setup guidance for Python/CLI users. No French download, persistent CA
+re-pin, installed-binary replacement, new commit/push or full TUI was authorized.
+Read PLAN.md and this file in full; independently inspect the dirty tree and results.
+Published baseline remains `4769606`; these changes are **uncommitted**.
+
+## Current result
+
+The metadata-only en_CA reservation made cached assets usable, without creating
+an installation request. Real owned tests now passed: success exit0, invalid
+media exit1 (AVFoundation/-11800), closed output exit1 (POSIX/32), and SIGTERM exit130
+after analyzeSequence requested its first real input (not merely admission).
+Every run required a new reservation, emitted actual en_CA acquired/released events,
+fully joined cleanup/readback and returned to **the same four** pre-existing
+reserved/installed locales: en_AU/en_GB/en_IN/en_US. Seven additional owned recordings
+and sequential switching among all five English regions also passed. No other
+pre-existing release, install/download or persistent re-pinning occurred.
+Independent retained-evidence review recomputed the hash, audited each raw case,
+transcript/word intervals and readback, and found no new blocker. It supports
+**local resolution of risk #19's two original source defects** on this tested
+Mac/SDK/artifact. It did not rerun native tests or measure sustained hardware
+inference/OS-wide networking. Operational/deployment limits remain; code is uncommitted.
+
+Owned proof: approved temp `stt-owned-proof-w5ykvv8x/summary.json`/case JSON,
+artifact SHA256 `58a1fa9259852c4fa78ba3a82475452b0fe96750fa167977856062090dba1846`.
+Reacquisition trial: `stt-approved-reacquire-9uimsvhl/result.json`; repeat/switch
+evidence: `stt-owned-repeat.json`. SDK en_CA may still report uninstalled while
+unreserved at idle; successful binding proved physical-cache usability **in this
+window**, not indefinite retention or a guarantee on other Macs.
+
+## Generic setup behavior
+
+`AssetSetup.swift` provides `--install-assets --language LOCALE` read-only preview;
+only matching `--confirm-download SUPPORTED_LOCALE` allows explicit setup. It may
+reuse cached data or download missing Apple models; success intentionally retains
+the supporting reservation for asset subscription. Failure/cancellation/report-output
+failure cleans only uniquely new ownership. Validate complete post-reserve state
+before the installer; do not reset unknown state.
+
+Native transcription now forbids automatic installation requests/downloads by
+default and checks readiness after reservation, before media/analyzer setup.
+Stronger `--require-installed-assets` still checks before allocation as well.
+`--no-asset-download` explicitly names the reservation-first no-installer path.
+Inventory capability fields let the Python adapter reject old/unsafe helpers.
+
+Python `engine.py` now preflights the EXACT helper used by direct JSON or protected
+legacy-script text/SRT. Missing assets produce requested/resolved locale and a
+shell-quoted explicit setup command, before analysis. A diagnostic native process
+is needed to query Apple; do not claim zero processes launch. Other backends stay
+unchanged. Real French read-only preview/wrapper refusal was tested, with no French
+analysis/download or reservation change (`stt-french-preflight.json`).
+
+Docs: `docs/apple-asset-setup.md`. The legacy script/Windows/TTS/package platform,
+product and empty base dependencies remain unchanged. First-use automatic Apple
+downloads are an explicitly approved behavior change, not preserved legacy behavior.
+
+## Checks and review
+
+Main: **61 Swift tests/release build**, **574 Python/four opt-in skips**, **578 with
+Apple opt-in/zero skips** (includes real text/JSON/segment+word SRT), Ruff/mypy
+(18-source scope)/legacy py_compile. Independent TTS helper results are recorded
+in verification. Initial read-only French script used a missing optional JSON key;
+corrected `.get` handling and reran without mutation.
+
+Reviewer closed two medium setup cases: report publication/final cancellation now
+stay inside ownership lifetime, and complete inventory preservation is checked
+before installation. Independent 61 Swift tests, 131 Python preflight/engine mocks,
+release build and repros passed; no remaining medium/high findings in that scope.
+New input observation is opt-in and emits only on actual input consumption.
+The real owned-evidence review/outcome is in `docs/verification.md`.
+
+## Next three actions
+
+1. Complete and verify the newly approved source commit/push, then check hosted
+   CI separately from local native evidence. Review remaining operational caveats; do not relabel
+   cached-data behavior as guaranteed offline retention or SIGKILL cleanup.
+2. Obtain separate approval for installing the newer helper or any future push. Old
+   installed engines will not gain these guarantees from a Python-only update.
+3. Keep TUI work proposal-only (`docs/tui-proposal.md`) unless implementation is
+   separately approved; reuse readiness/confirmation/job ownership safely.
+
+---
+
+# Historical checkpoint — stopped en_CA window and maintenance safeguards
+
+**2026-10-12: en_CA window approved; release verified, validation STOPPED on asset
+unavailability. No download/re-pin/new commit/push approved.** Read this file and PLAN.md in full, inspect actual Git/diff and rerun
+checks. Verified starting tree was clean `main` at
+`4769606b3d3aa9a38fa4b59dedc4b75d49b721cc`; its GitHub CI `38213808150` succeeded.
+The old handoff below is retained as a historical checkpoint, not current permission.
+
+The user confirmed **en-US default, all English regions preserved for other
+users**, and approved the bounded Terra/Opus maintenance recommendation. Do not
+classify a non-default locale as unused or automatically evict it.
+
+**Latest approval/result:** the user approved one temporary en_CA release and
+guarded native tests, stopping on unexpected state, with no downloads or automatic
+re-pinning. No native STT invocation was running at preflight. The SAME built
+executable reported full5/5/all installed, then the one confirmed en_CA release
+returned true and verified non-target preservation. Its after-report was **4/5**:
+`en_AU,en_GB,en_IN,en_US`; all four installed. Exact en_CA is still supported but
+SDK installed status became **false**, confirmed by read-only per-region status.
+The agent STOPPED before any owned-transcription test, reacquisition, installation
+or re-pinning. Do not infer physical file deletion from that status. Canadian
+offline availability is not currently confirmed. Risk #19 remains partial.
+
+Actual evidence: approved temporary `stt-approved-window-q645k4du/` contains
+`fingerprint.json`, `before.json`, `release.json`, `stopped-readonly-status.json`.
+Binary SHA256: `4bce6e5aaf6502e2a91231ca49eeec465c82e265c0e3a4f40b0f11fc996f76b9`;
+identifier `whisper-py-convert-apple`, normal linker/ad-hoc signing unchanged.
+No rebuild/copy/rename/re-sign occurred between action and readbacks.
+
+To make later owned evidence unambiguous, require-new validation now emits opt-in
+stderr `Validation:` JSON (actual acquired/released locale, analysis entry/finish),
+never audio paths/transcript. Entry is an admission boundary, not proof an analyzer
+began work; marker-triggered cancellation alone cannot prove active-analysis cleanup.
+The label was corrected after final review (no owned runtime test had used it).
+These are not a general TUI protocol. Mock test added;
+**47 Swift tests and release build passed** before the real action. Installed
+binaries still were not replaced. Normal en_CA invocation might attempt installation;
+do not use it as an unapproved recovery probe.
+
+User also requested future TUI ideas, not full implementation. `docs/tui-proposal.md`
+captures STT/TTS/jobs/assets tabs, optional dependencies, safe owned-process controls,
+stale snapshot handling and preview-first maintenance. No TUI/daemon/cache/ledger
+or arbitrary process control was implemented.
+
+## New implementation scope
+
+- `ReservationMaintenance.swift`: locked inspect/unconfirmed preview; an actual
+  exact single-target release requires matching confirmation + unused/quiescent
+  client acknowledgement; default en_US needs an extra flag. No release-all,
+  aliases, retries, installs, reserve or rollback. Readback checks target absence
+  and non-target preservation, returning a structured report/nonzero verification
+  failure. The one later user-approved confirmed en_CA release is recorded above.
+- `Reservation.swift`: complete owned cleanup/readback is cancellation-isolated
+  and fully awaited, including primary error preservation and late cancellation.
+  Optional installed/exact/new validation seams prevent accidental downloads or
+  borrowed/fallback success being counted as owned cleanup evidence.
+- `main.swift`, `AppleInventory.swift`: additive native-only flags, locked existing
+  inventory inspection, exact asset-status checks and a no-install-request guard.
+  Normal defaults/first-use installation/transcript/text/SRT semantics are preserved.
+- New `MaintenanceSafetyTests.swift`; narrowly extended adapter stage-error tests.
+  No persistent worker/cache, ledger, daemon or automatic pruning was introduced.
+
+Cancellation shielding addresses a documented-contract uncertainty, **not a
+reproduced Apple defect**. Release can unsubscribe assets; post-release availability
+and reversibility are not guaranteed. No extra region assets are downloaded to test.
+
+## Verification and remaining gates
+
+Baseline default Python suite independently reran **483 passed/four opt-in skips**.
+Final counts: **491 Python/four explicit opt-in skips**, **495 passed/zero skips
+with Apple opt-in**, **46 Swift STT tests/release build**, **48 independent TTS
+tests/release build**, Ruff/mypy (18 source files)/legacy py_compile. Five English
+regions pass strict offline word JSON; five previews and locked inspection preserve
+the inventory. New-owned validation rejects borrowed reuse as intended. Current
+native/reviewer results are recorded in `docs/verification.md`.
+Initial Swift compilation found an async short-circuit autoclosure and throwing
+`#require` macro inputs; both were corrected before final runs. No shared caches
+were purged. Build/test artifacts are under approved temporary `opencode` paths
+`stt-maintenance-*`, not Git; installed binaries were not overwritten.
+Reviewer found/closed two medium mock cases: confirmed absent/alias targets now
+refuse before mutation, and newly appearing post-release reservations are retained
+and reported rather than silently succeeding. Integrated asset-loss tests cover
+release and acquisition, installation-call refusal and owned cleanup. Independent
+closure: **46 Swift tests passed**, 48 adapter tests passed, byte-matched source,
+no remaining medium/high findings in reviewed scope. Evidence under the approved
+temporary root: `maintenance-closure-5bfersgk/closure-test.log`.
+
+The earlier safeguards-only snapshot had full5/5; the approved action above now
+leaves4/5 with exact en_CA uninstalled. Risk #19 stays partial: real true acquisition/
+release after success/failure was not run because the availability guard stopped
+the window. A new recovery/reacquisition or installation action needs further
+approval; do not proceed from the now-ended window. Mocked releases are
+not native recovery evidence. Older/non-cooperating clients and abrupt death remain
+limitations; do not add PID-based automatic recovery.
+
+## Next actions
+
+1. Inspect this uncommitted diff and verify the final tests/reviewer outcome in
+   `docs/verification.md` before any further work.
+2. Report the exact stopped state and ask for separately scoped en_CA recovery:
+   metadata-only reserve/readback or explicit installation (if needed), with no
+   promise that re-reserving restores assets. No automatic rollback/download.
+3. Obtain separate approval for a future commit/push or installed-engine update;
+   prior source publication and this implementation approval do not grant those.
+
+Details/commands: `docs/stt-reservation-maintenance.md`. Changed scope is the native
+STT helper/tests, narrow Python failure mapping/tests, PLAN and affected docs only.
+Legacy script, Windows, TTS, root platform/product requirements and base runtime
+dependencies remain unchanged.
+
+---
+
+# Historical handoff — original Apple STT risk #19 maintenance and source push
 
 **Current checkpoint: 2026-10-12. Partial; combined commit/push now authorized.** Read `PLAN.md`
 and this file in full, then inspect Git/diff and rerun checks independently.

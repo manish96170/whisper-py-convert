@@ -94,6 +94,12 @@ SIGINT/SIGTERM request cancellation and await cleanup; SIGKILL/power loss cannot
 identity. Full existing inventory is not automatically reset. Real newly-owned
 cleanup/recovery remains unverified until capacity is available; risk is partial.
 
+The uncommitted follow-up adds locked maintenance inspect/preview and separately
+confirmed exact-target release, with optional native installed/exact/new validation
+guards. Owned cleanup/readback is cancellation-isolated and **fully awaited**;
+no detached work survives gate release. Default en-US and other English regions
+remain supported. See [maintenance safety](docs/stt-reservation-maintenance.md).
+
 The Windows helper is an optional MSIX-packaged C# executable. It uses Windows
 AI Speech batch recognition on supported Windows 11 24H2+ hardware. It
 currently returns plain text; timed subtitle output should use faster-whisper

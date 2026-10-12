@@ -6,7 +6,13 @@ let appleInventory = ReservationInventory(
     reservedLocales: { await AssetInventory.reservedLocales },
     maximum: { AssetInventory.maximumReservedLocales },
     reserve: { try await AssetInventory.reserve(locale: $0) },
-    release: { await AssetInventory.release(reservedLocale: $0) }
+    release: { await AssetInventory.release(reservedLocale: $0) },
+    isInstalled: { locale in
+        guard SpeechTranscriber.isAvailable,
+              let supported = await SpeechTranscriber.supportedLocale(equivalentTo: locale),
+              sameSpeechLocale(locale, supported) else { return false }
+        return await AssetInventory.status(forModules: [SpeechTranscriber(locale: supported, preset: .transcription)]) == .installed
+    }
 )
 
 private struct InventoryStatus: Encodable {
@@ -15,9 +21,12 @@ private struct InventoryStatus: Encodable {
     let installed: Bool
     let reserved_locales: [String]
     let maximum_reserved_locales: Int
+    let asset_setup_supported = true
+    let automatic_asset_downloads = false
 
     enum CodingKeys: String, CodingKey {
         case available, supported_locale, installed, reserved_locales, maximum_reserved_locales
+        case asset_setup_supported, automatic_asset_downloads
     }
     func encode(to encoder: Encoder) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
@@ -26,6 +35,8 @@ private struct InventoryStatus: Encodable {
         try values.encode(installed, forKey: .installed)
         try values.encode(reserved_locales, forKey: .reserved_locales)
         try values.encode(maximum_reserved_locales, forKey: .maximum_reserved_locales)
+        try values.encode(asset_setup_supported, forKey: .asset_setup_supported)
+        try values.encode(automatic_asset_downloads, forKey: .automatic_asset_downloads)
     }
 }
 

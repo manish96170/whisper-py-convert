@@ -1,5 +1,153 @@
 # Clean-install and offline core verification
 
+## Explicit setup and real ownership evidence — latest local verification
+
+The approved temporary en_CA metadata reacquisition succeeded without an
+installation request/download: cache usability was restored while bound, then
+owned cleanup returned to the same4/5 idle state. The original stopped-window
+result below is historical, not the final outcome.
+
+| Native owned case | Actual outcome | Cleanup/readback |
+| --- | --- | --- |
+| Synthetic word-JSON success | exit0, expected nonempty transcript/words | en_CA acquired/released, original four preserved |
+| Invalid media after acquisition | exit1, AVFoundation/-11800 | same verified return |
+| Closed stdout after collection | exit1, POSIX/32 | same verified return |
+| SIGTERM after first real analyzer input requested | exit130, no analysis-finished event | same verified return |
+
+Each run required reserve==true and a unique actual supporting delta; emitted
+`acquired` only after ownership established and `released` only after joined
+cleanup/readback succeeded. An `analysis-entry` marker alone is not proof; this
+cancellation trial waited for `analysis-input` from the wrapped iterator. It proves
+cancellation after native input consumption began, not a hardware-inference timing
+measurement. No held pre-existing reservations were released during these tests.
+
+Same compiled binary SHA256:
+`58a1fa9259852c4fa78ba3a82475452b0fe96750fa167977856062090dba1846`.
+Evidence under approved temp `stt-owned-proof-w5ykvv8x/summary.json`, case JSON and
+synthetic transcript. Seven more newly-owned CA recordings and sequential text
+switching across en-US/en-CA/en-GB/en-AU/en-IN passed (`stt-owned-repeat.json`).
+Other four remained reserved/installed; no installations/downloads/re-pinning.
+Independent read-only evidence closure recomputed that executable hash and checked
+all four raw case logs, parsed events, transcript (nine ordered words) and identical
+before/after inventory/installed status. It supports **local resolution of the two
+original risk #19 source defects**, with recorded Mac/SDK/artifact scope. It audited
+retained results, not a new native reproduction. Input consumption is not proof of
+sustained hardware inference; OS-wide background network activity was not measured.
+
+Real French inspection/setup PREVIEW and public Python wrapper refusal showed the
+resolved fr_FR locale and exact quoted confirmed-setup command. No French analysis,
+reservation or download started, and inventory was unchanged (`stt-french-preflight.json`).
+An initial script expected an optional nil JSON key to exist; `.get` fixed the
+read-only assertion, and the successful rerun is the evidence counted here.
+
+Commands: default Python **574 passed/four explicit opt-in skips**; native-enabled
+Python **578 passed/zero skips**, including text/JSON/segment+word SRT fixtures.
+Root Swift **61 tests passed**, release build passed; Ruff/mypy (18 sources)/legacy
+py_compile passed. Independent TTS helper results remain separate. No shared
+caches/DBs were purged; generated evidence/binaries stay outside Git.
+Fresh independent TTS helper completed **48 tests and release build**, with its
+existing isolated TestingMacros retry (`stt-setup-tts.log`). Native-enabled Python
+again passed **578/zero skips** after final setup fixes. No new hosted CI run,
+source commit/push or installed engine replacement is implied.
+
+Independent setup/preflight review closed both medium findings (report/cancellation
+outside retention lifetime and non-target loss before installer). Its isolated
+61 Swift tests, 131 Python mocked tests, release build and correction repros passed,
+with no remaining medium/high findings in that scope. Source/test files were
+matched to tested snapshots; reviewer performed no real asset calls/downloads.
+Evidence: `asset-closure-swift-e9h_m0w6/` and `asset-closure-python-cvkr9gf7/`.
+
+Successful explicit setup is deliberate persistent subscription intent; regular
+transcription remains temporary-owned or borrowed. No confirmed setup command was
+executed here. Native first-use downloads are now forbidden during transcription;
+setup/network consent is separate. Generic preflight paths/capability negotiation
+are documented in `docs/apple-asset-setup.md`.
+
+## Approved en_CA maintenance window — stopped result
+
+After explicit user approval, main verified no native STT helper was active,
+froze the compiled artifact, inspected full5/5/all-installed state, and executed
+**one** confirmed pre-existing en_CA release through that same binary/gate. Apple
+returned **true**; readback verified only en_CA disappeared and the other four
+reservations remained unchanged. The exact en_CA installed check became **false**.
+Main immediately STOPPED as promised: **zero owned-transcription validation runs,
+zero downloads/installation requests, zero re-pinning**. Read-only diagnostics then
+confirmed en_CA remains supported (`supported_locale: en_CA`) but `installed: false`;
+en-US/en-GB/en-AU/en-IN remain exact and installed, with4/5 reservations.
+
+This establishes real targeted release/readback, not complete new-ownership cleanup.
+Risk #19 remains partial. SDK uninstalled status does not prove physical files were
+deleted; a later reserve-only recovery could potentially expose cached data, but
+that is unverified and needs new approval. Normal unguarded CA transcription may
+create an installation request and is not an approved diagnostic probe.
+
+Evidence under approved temporary `stt-approved-window-q645k4du/`: fingerprint,
+before/release/stopped read-only JSON. Frozen binary SHA256
+`4bce6e5aaf6502e2a91231ca49eeec465c82e265c0e3a4f40b0f11fc996f76b9`, original
+product identifier/ad-hoc linker signing; no identity-evasion step. Validation-only
+stderr ownership/analysis diagnostics were added and tested before the action:
+**47 Swift tests passed**, release build passed. No installed binary replacement,
+commit/push or TUI implementation was performed.
+Independent stopped-window review verified the report/hash/non-target preservation,
+reran 47 mocked Swift tests, and found one evidence-label ambiguity: the initial
+`analysis-started` event preceded analyzer admission and could not establish active
+analysis. It is now named `analysis-entry`, explicitly not active-analysis proof.
+No owned runtime validation used that event. Current-facing stale state wording
+was corrected; reviewer closure reported no new issue in those fixes. The original
+4bce… window executable is preserved unchanged, while the final source build uses
+a separate scratch directory (`stt-window-final-release`) and is not executed as
+a recovery probe. No further Speech mutation was performed after stopping.
+
+## Uncommitted reservation maintenance follow-up — 2026-10-12
+
+Starting tree independently verified clean at published `4769606`; hosted CI
+`38213808150` passed for that baseline, not these new changes. The user authorized
+the bounded [maintenance safeguards](stt-reservation-maintenance.md), while keeping
+default en-US/all regional choices, not an exact real release, download or new push.
+
+- Baseline rerun: **483 passed/four explicit native opt-in skips**.
+- New default Python suite: **491 passed/four opt-in skips**; native-enabled suite:
+  **495 passed/zero skips**, including real text/JSON/segment+word SRT fixtures.
+  Ruff/mypy (18-file scope)/legacy py_compile passed; release STT build passed.
+- Independent TTS helper: **48 Swift tests passed**, release build passed, unchanged
+  TTS implementation/platform. No global caches were deleted.
+- Native locked inspect and **five previews** made no reservation changes. Exact
+  installed/offline word JSON passed for en-US/en-CA/en-GB/en-AU/en-IN. New-ownership
+  validation correctly rejected borrowed reuse; invalid media preserved the expected
+  provider failure. Same-executable inventory remained **5/5 unchanged**.
+- Root Swift: **46 tests passed**, three suites; release build passed. Initial Swift
+  builds caught an async short-circuit autoclosure and throwing `#require` inputs;
+  these compile errors were corrected, not counted as passing checks.
+
+The reviewer identified two mocked medium cases: a confirmed alias/absent selector
+could claim verified success, and cleanup could miss an extra reservation introduced
+during release. Both were corrected with refusal before mutation and full post-release
+extra-state reporting, preserving primary failures and retaining unknown entries.
+Added tests exercise installed→absent transitions during release and reservation,
+no installation-request creation and owned cleanup following offline refusal.
+These are mocked failure scenarios, not reproduced Apple defects.
+Reviewer closure independently passed **46 repository Swift tests** and **48
+adapter mocked Python tests**, byte-matched the tested source/tests, and reported
+no remaining medium/high findings in scope. Evidence:
+`maintenance-closure-5bfersgk/closure-test.log` beneath the approved temporary root.
+The reviewer made no real Speech calls or asset changes.
+
+At this earlier safeguards-only checkpoint no confirmed native maintenance release
+was executed; the later approved stopped result is recorded above. Cancellation shielding is
+defensive hardening because Apple's cancelled-task behavior is undocumented, not
+proof of a prior framework failure. Owned acquisition/release native validation
+still needs separately approved exact-target recovery; do not resolve risk #19 on
+mocks/borrowed runs. Asset retention/reversibility and abrupt-kill cleanup remain
+unproven. No ledger, persistent worker/cache, daemon or automatic pruning was added.
+
+Evidence under the approved temporary root: `stt-maintenance-{test,build,tts}.log`,
+`stt-maintenance-native.json`, scratch source/binaries/caches in `stt-maintenance-*`.
+Final native read-only/borrowed evidence is in `stt-maintenance-final-native.json`;
+all five unconfirmed previews preserve state. SIGINT while inspect waits for the
+gate returns130 without a mutation being admitted. Existing default text/JSON/SRT
+fixtures also pass; no real release/newly-owned result is implied.
+No artifacts/binaries were added to Git or installed over existing engines.
+
 Phase 12 adds `scripts/smoke_core.py`. Run it with the **installed wrapper's
 Python**, preferably from a fresh virtual environment with a wheel installed.
 It uses only the standard library, checks package/version metadata and the

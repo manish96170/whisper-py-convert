@@ -14,6 +14,9 @@ struct Options {
     let language: String
     let format: String
     let timestampMode: TimestampMode
+    let requireInstalledAssets: Bool
+    let requireExactLocale: Bool
+    let requireNewReservation: Bool
 }
 
 struct OutputWord: Codable {
@@ -60,17 +63,36 @@ func printUsage() {
       --format text|json     Output format (default: text)
       --timestamp-mode none|segment|word  JSON timing detail (default: segment)
       --inventory-status     Read-only locale/assets/reservations JSON (no input)
+      --require-installed-assets  Refuse installation requests/downloads
+      --require-exact-locale  Refuse regional locale substitution
+      --require-new-reservation  Refuse borrowed reuse (validation only)
+      --no-asset-download     Reservation-first cached check (also the normal default)
+
+    Asset setup (no audio; explicit network consent only):
+      --install-assets --language fr-FR    Read-only setup preview
+      --install-assets --language fr-FR --confirm-download fr_FR
+      Confirmed setup may download Apple models and retains their reservation.
+
+    Maintenance (no audio; same executable identity and reservation lock):
+      --reservation-maintenance inspect
+      --reservation-maintenance release --reserved-locale EXACT [--dry-run]
+      Release requires --confirm-release EXACT --confirm-unused
+      Default en_US additionally requires --allow-default-release
+      Releasing assets may affect availability; no downloads or release-all.
 
     The transcript is written to stdout; diagnostics are written to stderr.
     """.utf8))
 }
 
-func parseOptions() throws -> Options? {
+func parseOptions(arguments supplied: [String] = Array(CommandLine.arguments.dropFirst())) throws -> Options? {
     var language = "en-US"
     var format = "text"
     var timestampMode = TimestampMode.segment
     var inputPath: String?
-    var arguments = Array(CommandLine.arguments.dropFirst())
+    var arguments = supplied
+    var requireInstalled = false
+    var requireExact = false
+    var requireNew = false
 
     while !arguments.isEmpty {
         let argument = arguments.removeFirst()
@@ -81,6 +103,10 @@ func parseOptions() throws -> Options? {
         case "--language":
             guard !arguments.isEmpty else { throw AppError.unsupportedLocale("missing --language value") }
             language = arguments.removeFirst()
+        case "--require-installed-assets": requireInstalled = true
+        case "--require-exact-locale": requireExact = true
+        case "--require-new-reservation": requireNew = true
+        case "--no-asset-download": break // All transcription paths now forbid downloads.
         case "--format":
             guard !arguments.isEmpty else { throw AppError.invalidFormat("missing --format value") }
             format = arguments.removeFirst()
@@ -99,12 +125,23 @@ func parseOptions() throws -> Options? {
     guard format == "text" || format == "json" else { throw AppError.invalidFormat(format) }
     let url = URL(fileURLWithPath: inputPath).standardizedFileURL
     guard FileManager.default.fileExists(atPath: url.path) else { throw AppError.inputNotFound(url.path) }
-    return Options(input: url, language: language, format: format, timestampMode: timestampMode)
+    return Options(input: url, language: language, format: format, timestampMode: timestampMode,
+                   requireInstalledAssets: requireInstalled, requireExactLocale: requireExact,
+                   requireNewReservation: requireNew)
 }
 
 func diagnostic(_ message: String, output: FileHandle = .standardError) {
     // Closed OR backpressured stderr must not mask errors or delay cleanup.
     writeDiagnostic(Data((message + "\n").utf8), descriptor: output.fileDescriptor)
+}
+
+/// Opt-in validation diagnostics only; never includes audio paths or transcript.
+func validationEvent(_ phase: String, locale: String? = nil) {
+    var event = ["phase": phase]
+    if let locale { event["actual_locale"] = locale }
+    if let data = try? JSONEncoder().encode(event) {
+        diagnostic("Validation: " + String(decoding: data, as: UTF8.self))
+    }
 }
 
 func seconds(_ time: CMTime) -> Double {
@@ -141,6 +178,36 @@ struct WhisperAppleTranscribe {
     }
 
     static func run() async throws {
+        if let setup = try AssetSetupCommand.parse(Array(CommandLine.arguments.dropFirst())) {
+            guard SpeechTranscriber.isAvailable else { throw AppError.unavailable }
+            let gate = try ReservationGate()
+            try await gate.acquire()
+            defer { gate.unlock() }
+            _ = try await setupSpeechAssets(setup, inventory: appleInventory,
+                warning: { diagnostic("Warning: \($0)") },
+                publish: { report in try await writeOutput(JSONEncoder().encode(report) + Data("\n".utf8)) }) { locale in
+                let modules: [any SpeechModule] = [SpeechTranscriber(locale: locale, preset: .transcription)]
+                if let request = try await AssetInventory.assetInstallationRequest(supporting: modules) {
+                    diagnostic("Explicitly requested Apple asset setup for \(locale.identifier); missing models may be downloaded.")
+                    try await request.downloadAndInstall()
+                    return true
+                }
+                return false
+            }
+            return
+        }
+        if let maintenance = try ReservationMaintenanceCommand.parse(Array(CommandLine.arguments.dropFirst())) {
+            guard SpeechTranscriber.isAvailable else { throw AppError.unavailable }
+            let gate = try ReservationGate()
+            try await gate.acquire()
+            defer { gate.unlock() }
+            let report = try await maintainReservation(maintenance, inventory: appleInventory)
+            try await writeOutput(JSONEncoder().encode(report) + Data("\n".utf8))
+            guard report.verified else {
+                throw STTFailure(code: "reservation_maintenance", message: "Release verification failed; inspect the reported inventory. No retry, reset or download was attempted")
+            }
+            return
+        }
         if CommandLine.arguments.contains("--inventory-status") {
             let args = Array(CommandLine.arguments.dropFirst())
             var language = "en-US"
@@ -156,6 +223,9 @@ struct WhisperAppleTranscribe {
                 }
                 index += 1
             }
+            let gate = try ReservationGate()
+            try await gate.acquire()
+            defer { gate.unlock() }
             try await inventoryStatus(language: language)
             return
         }
@@ -165,6 +235,12 @@ struct WhisperAppleTranscribe {
         try await gate.acquire()
         defer { gate.unlock() }
         try await withReservation(requested: Locale(identifier: options.language), inventory: appleInventory,
+                                  requireInstalled: options.requireInstalledAssets,
+                                  requireExactLocale: options.requireExactLocale,
+                                  requireNewReservation: options.requireNewReservation,
+                                  event: { phase, actual in
+                                      if options.requireNewReservation { validationEvent(phase, locale: actual.identifier) }
+                                  },
                                   warning: { diagnostic("Warning: \($0)") }) { locale in
             if locale.identifier.replacingOccurrences(of: "_", with: "-").lowercased()
                 != options.language.replacingOccurrences(of: "_", with: "-").lowercased() {
@@ -188,17 +264,20 @@ struct WhisperAppleTranscribe {
         }
         let modules: [any SpeechModule] = [transcriber]
         do {
-            let assetStatus = await AssetInventory.status(forModules: modules)
-            if assetStatus != .installed {
-                diagnostic("Installing Apple speech assets for \(locale.identifier)...")
-                if let request = try await AssetInventory.assetInstallationRequest(supporting: modules) {
-                    try await request.downloadAndInstall()
-                }
-                guard await AssetInventory.status(forModules: modules) == .installed else {
-                    throw STTFailure(code: "asset_installation", message: "Apple speech assets are not installed for \(locale.identifier)")
-                }
-            }
+            // No implicit network activity during transcription, including a
+            // readiness race after the Python wrapper's read-only preflight.
+            try await ensureSpeechAssets(requireInstalled: true, installed: {
+                await AssetInventory.status(forModules: modules) == .installed
+            }, install: {
+                throw STTFailure(code: "assets_not_installed", message: "No automatic installation is permitted during transcription")
+            })
         } catch is CancellationError { throw CancellationError() }
+        catch let failure as STTFailure {
+            if failure.code == "assets_not_installed" {
+                throw STTFailure(code: failure.code, message: "Apple assets for \(locale.identifier) are not ready. No transcription or download started. Preview this executable with --install-assets --language \(locale.identifier); explicitly approve setup with --confirm-download \(locale.identifier), then retry.")
+            }
+            throw failure
+        }
         catch {
             // Installation-request creation can itself perform reservation.
             // Preserve its typed capacity/unsupported errors rather than
@@ -236,9 +315,15 @@ struct WhisperAppleTranscribe {
         }
 
         let segments: [OutputSegment]
+        // Admission boundary only: cancellation can still prevent analyzer entry.
+        if options.requireNewReservation { validationEvent("analysis-entry") }
         do {
             segments = try await collectResults(resultsTask, stop: stop) {
-                let lastSample = try await analyzer.analyzeSequence(provider.analyzerInputs)
+                let reportInputs = options.requireNewReservation
+                let inputs = ObservedAnalyzerInputs(base: provider.analyzerInputs, onFirstInput: {
+                    if reportInputs { validationEvent("analysis-input") }
+                })
+                let lastSample = try await analyzer.analyzeSequence(inputs)
                 try Task.checkCancellation()
                 if let lastSample {
                     try await analyzer.finalizeAndFinish(through: lastSample)
@@ -251,6 +336,7 @@ struct WhisperAppleTranscribe {
             if Task.isCancelled || error is CancellationError { throw CancellationError() }
             throw STTFailure.framework("transcription_failed", "Apple analysis/result collection failed", error)
         }
+        if options.requireNewReservation { validationEvent("analysis-finished") }
         try Task.checkCancellation()
         do {
             if options.format == "json" {

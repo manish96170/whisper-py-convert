@@ -6,8 +6,9 @@ module never imports or forks `whisper-py-convert.py`. Instead:
 * `text`/`srt` output formats shell out to the existing, unmodified
   `whisper-py-convert` entrypoint exactly as a user would run it — same
   flags, same stdout/stderr behavior, same engine auto-resolution. This
-  trivially satisfies "preserve existing input/output behavior" because
-  nothing about that tool's behavior is reinterpreted.
+   preserves the tool's transcript/rendering behavior. When Apple is
+   selected, a read-only probe of its exact helper checks asset readiness
+   before invoking the script; other backend routing remains unchanged.
 * `json` output format needs genuine structured segments/words, which
   `whisper-py-convert.py` itself does not expose as a CLI format. For the
   Apple engine, this module calls the existing `whisper-py-convert-apple`
@@ -23,7 +24,9 @@ module never imports or forks `whisper-py-convert.py`. Instead:
 from __future__ import annotations
 
 import json as json_module
+import os
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -49,6 +52,99 @@ def resolve_whisper_py_convert() -> Path:
     return script
 
 
+def _find_legacy_apple_binary(script: Path) -> Path | None:
+    """Mirror the protected script's finder, not the shared installed finder.
+
+    Asset inventory is executable-identity-specific. A healthy installed
+    helper says nothing about the helper the legacy script will actually run.
+    """
+    directory = script.resolve().parent
+    name = "whisper-py-convert-apple"
+    candidates = (
+        directory / name,
+        directory / ".build" / "out" / "Products" / "Release" / name,
+        directory / ".build" / "release" / name,
+        directory / ".build" / "arm64-apple-macosx" / "release" / name,
+    )
+    return next((path for path in candidates if path.is_file() and os.access(path, os.X_OK)), None)
+
+
+def _preflight_apple_assets(binary: Path, *, language: str | None, timeout: float) -> None:
+    """Read readiness from the SAME binary without setup or transcription.
+
+    Require the explicit-setup/no-automatic-download capability before trusting
+    installed status: old helpers could otherwise download during transcription.
+    """
+    locale = language or "en-US"
+    rebuild = (
+        "Rebuild/update this Apple STT helper from matching source (./install.sh stt on a compatible Mac), "
+        f"then retry this same binary: {shlex.quote(str(binary))}. "
+        "The helper must support --inventory-status, explicit --install-assets setup and no automatic asset downloads."
+    )
+
+    def unsafe(reason: str) -> MacSpeechError:
+        return MacSpeechError(
+            code=ErrorCode.NATIVE_PROCESS_ERROR,
+            message=f"Apple STT locale {locale!r} readiness could not be verified: {reason}. No transcription or download started.",
+            remedy=rebuild,
+        )
+
+    try:
+        result = subprocess.run(
+            [str(binary), "--inventory-status", "--language", locale],
+            capture_output=True, text=True, timeout=timeout,
+        )
+    except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+        raise unsafe(f"read-only asset probe failed ({type(exc).__name__})") from exc
+    if result.returncode != 0:
+        raise unsafe(f"read-only asset probe exited with status {result.returncode}")
+    try:
+        status = json_module.loads(result.stdout)
+    except (json_module.JSONDecodeError, TypeError) as exc:
+        raise unsafe("invalid inventory JSON") from exc
+
+    def valid_locale(value: object) -> bool:
+        return isinstance(value, str) and bool(value.strip()) and not any(
+            ord(char) < 32 or 0xD800 <= ord(char) <= 0xDFFF for char in value
+        )
+
+    if not isinstance(status, dict) or any(
+        type(status.get(field)) is not bool
+        for field in ("available", "installed", "asset_setup_supported", "automatic_asset_downloads")
+    ):
+        raise unsafe("missing or malformed inventory/capability fields (possibly an outdated helper)")
+    supported = status.get("supported_locale")
+    reservations = status.get("reserved_locales")
+    maximum = status.get("maximum_reserved_locales")
+    if (
+        "supported_locale" not in status
+        or (supported is not None and not valid_locale(supported))
+        or not isinstance(reservations, list)
+        or not all(valid_locale(item) for item in reservations)
+        or type(maximum) is not int
+        or maximum < 0
+    ):
+        raise unsafe("malformed inventory locale/reservation fields")
+    if status["asset_setup_supported"] is not True or status["automatic_asset_downloads"] is not False:
+        raise unsafe("helper does not guarantee explicit asset setup with automatic downloads disabled")
+    if not status["available"]:
+        raise unsafe("Apple SpeechTranscriber API is unavailable on this Mac; use a compatible Mac/macOS")
+    if supported is None:
+        raise unsafe("requested locale is unsupported; choose a locale supported on this Mac")
+    if not status["installed"]:
+        command = shlex.join([
+            str(binary), "--install-assets", "--language", supported, "--confirm-download", supported,
+        ])
+        raise MacSpeechError(
+            code=ErrorCode.NATIVE_PROCESS_ERROR,
+            message=(
+                f"Apple STT locale {locale!r} (resolved to {supported!r}) is not ready: assets are not installed. "
+                "Asset setup may download missing Apple models; no transcription or download started."
+            ),
+            remedy=f"Run explicit command then retry: {command}",
+        )
+
+
 def _classify_failure(stderr: str, returncode: int) -> MacSpeechError:
     # Native stage markers survive both direct JSON and the unchanged legacy
     # script's stderr forwarding. Check them before broad legacy heuristics:
@@ -72,6 +168,10 @@ def _classify_failure(stderr: str, returncode: int) -> MacSpeechError:
         "asset_installation": "Check installed Apple speech assets and the included framework domain/code.",
         "transcription_failed": "Check the media input and included Apple framework domain/code.",
         "output_failed": "Check stdout/output destination and the included error information.",
+        "assets_not_installed": "Install the selected Apple assets explicitly before offline validation; no download was attempted.",
+        "locale_substitution": "Choose an installed exact locale; regional substitution was refused by the validation option.",
+        "new_reservation_required": "This was borrowed reuse, not newly-owned cleanup evidence. Do not release existing reservations automatically.",
+        "reservation_maintenance": "Inspect this same binary's inventory and exact confirmation options; never use a global reset.",
     }
     for marker, remedy in remedies.items():
         if f"Error: [{marker}]" in stderr:
@@ -102,6 +202,16 @@ def run_text_or_srt(
     `srt` output formats and returns its content exactly as produced,
     along with the engine it actually resolved to."""
     script = resolve_whisper_py_convert()
+    if engine in ("apple", "auto"):
+        binary = _find_legacy_apple_binary(script)
+        if binary is not None:
+            _preflight_apple_assets(binary, language=language, timeout=timeout)
+        elif engine == "apple":
+            raise MacSpeechError(
+                code=ErrorCode.ENGINE_NOT_FOUND,
+                message="Apple Speech backend is not built beside the selected whisper-py-convert script.",
+                remedy="Run ./install.sh stt on a compatible Mac, or select a script with its Apple helper installed beside it.",
+            )
     command = [sys.executable, str(script), "--engine", engine]
     if model:
         command += ["--model", model]
@@ -199,6 +309,7 @@ def _resolve_engine_for_json(requested: str) -> str:
 def _run_apple_json(input_path: str, *, language: str | None, timeout: float) -> Transcript:
     binary = find_apple_stt_binary()
     assert binary is not None  # guaranteed by _resolve_engine_for_json
+    _preflight_apple_assets(binary, language=language, timeout=timeout)
     command = [str(binary), "--format", "json", "--timestamp-mode", "word"]
     if language:
         command += ["--language", language]

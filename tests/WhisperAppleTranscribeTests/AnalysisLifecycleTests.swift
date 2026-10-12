@@ -3,6 +3,12 @@ import Testing
 @testable import WhisperAppleTranscribe
 
 private enum AnalysisError: Error { case analyzer, results }
+private final class InputCount: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = 0
+    func increment() { lock.lock(); value += 1; lock.unlock() }
+    func get() -> Int { lock.lock(); defer { lock.unlock() }; return value }
+}
 private actor Events {
     var stopped = false
     var drained = false
@@ -12,6 +18,18 @@ private actor Events {
 }
 
 struct AnalysisLifecycleTests {
+    @Test func firstInputEventOccursOnlyWhenIteratorReadsAndOnlyOnce() async throws {
+        let count = InputCount()
+        let stream = AsyncStream<Int> { continuation in
+            continuation.yield(1); continuation.yield(2); continuation.finish()
+        }
+        let inputs = ObservedAnalyzerInputs(base: stream, onFirstInput: { count.increment() })
+        #expect(count.get() == 0)
+        var values: [Int] = []
+        for try await value in inputs { values.append(value) }
+        #expect(values == [1, 2] && count.get() == 1)
+    }
+
     @Test func analyzerFailureStopsAndDrainsCollectorBeforeReturning() async {
         let events = Events()
         let results = Task<Int, Error> {

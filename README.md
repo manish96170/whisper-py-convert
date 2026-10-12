@@ -45,6 +45,15 @@ wrapper script; it never removes an existing STT installation.
 - [Phase 13A workspace/output safety and upgrade instructions](docs/phase13-hardening.md)
 - [Phase 13B bounded local scene batches](docs/batch-synthesis.md)
 - [Apple STT reservation repair, one-at-a-time admission and remaining limits](docs/stt-reservation-repair.md)
+- [Safe reservation maintenance previews and native offline validation](docs/stt-reservation-maintenance.md)
+- [Apple language readiness and explicit asset setup before transcription](docs/apple-asset-setup.md)
+
+The current Apple helper checks language readiness before analysis and does not
+silently download assets during transcription. Missing assets produce an explicit
+setup command; confirm it only when you approve any needed Apple model download.
+Use matching updated Python/native versions; source/wheel installation does not
+silently update an old installed helper. Device-specific reservation capacity is
+not a recording/process quota.
 
 The toolkit is **source-available under a custom proprietary personal-use,
 non-commercial, no-derivatives license**, not OSI-approved open source.

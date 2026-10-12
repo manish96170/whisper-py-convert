@@ -1,10 +1,26 @@
 # macOS and Apple Silicon support
 
+Current uncommitted follow-up keeps default en-US and every supported regional
+locale; no variant is automatically evicted as "unused". New maintenance and
+native validation controls preserve the same Swift 6.4/macOS 27 STT boundary,
+independent of TTS. See [maintenance safety](stt-reservation-maintenance.md).
+
+In the subsequently approved en_CA window, its reservation was released but exact
+installed status became false; the test window stopped. Canadian English remains
+supported by the SDK, not confirmed offline-ready. Other four regions remain
+installed/reserved. Do not equate available regional choices with installed assets.
+
 **Status:** Updated through Phase 12. Personal Voice/system-voice findings
 remain the Phase 5 observations; packaging/Python evidence is below. Native
 source requires Swift 6.4+, separately from runtime deployment floors (TTS
 macOS 13+, Apple STT macOS 27+). Older OS/Intel runtime claims await actual
 testing, not inference from compilation or mocked CI jobs.
+
+The subsequent approved en_CA metadata binding restored cached usability while
+owned without an installation request. Four owned outcomes/repetition/readback
+are now evidenced locally, not a general offline-retention guarantee. Apple
+first-use setup is explicit and readiness checks are generic to the selected
+compatible Mac/helper; see [asset setup](apple-asset-setup.md).
 
 ## Phase 12 Python runtime evidence
 
